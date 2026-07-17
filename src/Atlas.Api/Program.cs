@@ -59,6 +59,7 @@ app.MapApiUserEndpoints();
 app.MapLeaveEndpoints();
 app.MapExpenseEndpoints();
 app.MapAmendmentEndpoints();
+app.MapFxRateEndpoints();
 
 app.Run();
 

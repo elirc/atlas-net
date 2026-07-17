@@ -30,6 +30,7 @@ public static class DataSeeder
             BillingEmail = "billing@acmerobotics.example",
             HeadquartersCountryCode = "US",
             ManagementFeeRate = 0.10m,
+            BillingCurrencyCode = "USD",
         };
         var nordwind = new Client
         {
@@ -38,8 +39,17 @@ public static class DataSeeder
             BillingEmail = "accounts@nordwind.example",
             HeadquartersCountryCode = "DE",
             ManagementFeeRate = 0.08m,
+            BillingCurrencyCode = "EUR",
         };
         db.Clients.AddRange(acme, nordwind);
+
+        db.FxRates.AddRange(
+            new FxRate { BaseCurrencyCode = "PHP", QuoteCurrencyCode = "USD", Rate = 0.0171m, EffectiveDate = new DateOnly(2026, 1, 1) },
+            new FxRate { BaseCurrencyCode = "PHP", QuoteCurrencyCode = "USD", Rate = 0.0175m, EffectiveDate = new DateOnly(2026, 7, 1) },
+            new FxRate { BaseCurrencyCode = "INR", QuoteCurrencyCode = "USD", Rate = 0.0116m, EffectiveDate = new DateOnly(2026, 1, 1) },
+            new FxRate { BaseCurrencyCode = "BRL", QuoteCurrencyCode = "USD", Rate = 0.1840m, EffectiveDate = new DateOnly(2026, 1, 1) },
+            new FxRate { BaseCurrencyCode = "GBP", QuoteCurrencyCode = "USD", Rate = 1.3100m, EffectiveDate = new DateOnly(2026, 1, 1) },
+            new FxRate { BaseCurrencyCode = "USD", QuoteCurrencyCode = "EUR", Rate = 0.9200m, EffectiveDate = new DateOnly(2026, 1, 1) });
 
         var maria = new Worker { FullName = "Maria Santos", Email = "maria.santos@example.com", CountryCode = "PH", DateOfBirth = new DateOnly(1993, 4, 12) };
         var jonas = new Worker { FullName = "Jonas Weber", Email = "jonas.weber@example.com", CountryCode = "DE", DateOfBirth = new DateOnly(1988, 11, 3) };

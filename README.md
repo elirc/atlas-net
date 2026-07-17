@@ -78,6 +78,13 @@ Invoice >──────┘  (one per client per completed run)
   with the hiring terms. Payroll pays the terms effective for each period — the latest record
   effective on or before the month's end — so future-dated raises never leak into earlier months
   (mid-month changes apply to the whole month; no proration).
+- **Multi-currency invoicing**: payroll always runs in the worker's local currency, while each
+  client is billed in its own billing currency (defaults to the HQ country's currency). Invoices
+  keep the local amounts and add the applied FX rate plus the converted total. Rates live in an
+  append-only dated table (`FxRate`, unique per base/quote/effective-date) and conversion uses the
+  rate effective for the payroll period — same selection rule as salary history. Completing a run
+  without a needed rate fails with 409 and leaves the run draft; all conversions round to 2 dp
+  away from zero.
 
 ## Authentication & authorization
 
@@ -124,6 +131,7 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `GET/POST /api/contract-amendments`, `GET /api/contract-amendments/{id}` | Amendments (filters: `?contractId=`, `?status=`) |
 | `POST /api/contract-amendments/{id}/approve\|reject\|cancel` | Amendment approval flow |
 | `GET /api/contracts/{id}/salary-history` | Immutable salary/title history |
+| `GET/POST /api/fx-rates` | Dated FX rates (filters: `?baseCurrency=`, `?quoteCurrency=`) |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,

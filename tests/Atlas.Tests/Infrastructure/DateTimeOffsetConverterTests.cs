@@ -41,6 +41,7 @@ public class DateTimeOffsetConverterTests : IDisposable
         LegalName = name,
         BillingEmail = $"{name.ToLowerInvariant()}@example.com",
         HeadquartersCountryCode = "US",
+        BillingCurrencyCode = "USD",
         CreatedAtUtc = createdAt,
     };
 
