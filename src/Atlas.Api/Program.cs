@@ -1,3 +1,4 @@
+using Atlas.Api;
 using Atlas.Api.Endpoints;
 using Atlas.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,14 @@ var connectionString = builder.Configuration.GetConnectionString("Atlas") ?? "Da
 builder.Services.AddDbContext<AtlasDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<PayrollService>();
 
+// RFC 7807 problem responses for unhandled errors and bare status codes.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
