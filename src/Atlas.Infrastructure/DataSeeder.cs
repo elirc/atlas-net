@@ -97,6 +97,11 @@ public static class DataSeeder
             db.OnboardingItems.AddRange(checklist);
         }
 
+        db.ApiUsers.AddRange(
+            new ApiUser { Name = "Atlas Ops (dev)", ApiKey = "dev-admin-key", Role = ApiRole.PlatformAdmin },
+            new ApiUser { Name = "Acme Robotics admin (dev)", ApiKey = "dev-acme-admin-key", Role = ApiRole.ClientAdmin, ClientId = acme.Id },
+            new ApiUser { Name = "Acme Robotics viewer (dev)", ApiKey = "dev-acme-viewer-key", Role = ApiRole.ClientViewer, ClientId = acme.Id });
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         db.ComplianceDocuments.AddRange(
             new ComplianceDocument

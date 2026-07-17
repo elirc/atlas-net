@@ -19,6 +19,7 @@ public class AtlasDbContext : DbContext
     public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
     public DbSet<Payslip> Payslips => Set<Payslip>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<ApiUser> ApiUsers => Set<ApiUser>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -144,6 +145,19 @@ public class AtlasDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.WorkerId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ApiUser>(user =>
+        {
+            user.HasKey(u => u.Id);
+            user.Property(u => u.Name).HasMaxLength(200);
+            user.Property(u => u.ApiKey).HasMaxLength(100);
+            user.Property(u => u.Role).HasConversion<string>().HasMaxLength(20);
+            user.HasIndex(u => u.ApiKey).IsUnique();
+            user.HasOne(u => u.Client)
+                .WithMany()
+                .HasForeignKey(u => u.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Worker>(worker =>

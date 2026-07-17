@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Atlas.Api.Auth;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,15 +10,26 @@ public static class ClientEndpoints
 {
     public static IEndpointRouteBuilder MapClientEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/clients");
+        var group = app.MapGroup("/api/clients").RequireAuthorization();
 
-        group.MapGet("/", async (AtlasDbContext db) =>
-            Results.Ok(await db.Clients.OrderBy(c => c.Name).Select(c => ToResponse(c)).ToListAsync()));
+        group.MapGet("/", async (ClaimsPrincipal user, AtlasDbContext db) =>
+        {
+            var query = db.Clients.AsQueryable();
+            if (!user.IsPlatformAdmin())
+            {
+                var ownClientId = user.ClientIdOrNull();
+                query = query.Where(c => c.Id == ownClientId);
+            }
 
-        group.MapGet("/{id:guid}", async (Guid id, AtlasDbContext db) =>
+            return Results.Ok(await query.OrderBy(c => c.Name).Select(c => ToResponse(c)).ToListAsync());
+        });
+
+        group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var client = await db.Clients.FindAsync(id);
-            return client is null ? Results.NotFound() : Results.Ok(ToResponse(client));
+            return client is null || !user.CanViewClient(client.Id)
+                ? Results.NotFound()
+                : Results.Ok(ToResponse(client));
         });
 
         group.MapPost("/", async (CreateClientRequest request, AtlasDbContext db) =>
@@ -64,7 +77,7 @@ public static class ClientEndpoints
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/clients/{client.Id}", ToResponse(client));
-        });
+        }).RequireAuthorization(AuthPolicies.PlatformAdmin);
 
         return app;
     }

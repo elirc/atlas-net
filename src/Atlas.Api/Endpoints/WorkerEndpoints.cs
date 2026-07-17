@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Atlas.Api.Auth;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,9 +10,9 @@ public static class WorkerEndpoints
 {
     public static IEndpointRouteBuilder MapWorkerEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/workers");
+        var group = app.MapGroup("/api/workers").RequireAuthorization();
 
-        group.MapGet("/", async (string? countryCode, AtlasDbContext db) =>
+        group.MapGet("/", async (string? countryCode, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var query = db.Workers.AsQueryable();
             if (!string.IsNullOrWhiteSpace(countryCode))
@@ -18,14 +20,34 @@ public static class WorkerEndpoints
                 var code = countryCode.Trim().ToUpperInvariant();
                 query = query.Where(w => w.CountryCode == code);
             }
+            if (!user.IsPlatformAdmin())
+            {
+                // Client users only see workers who have a contract with their client.
+                var ownClientId = user.ClientIdOrNull();
+                query = query.Where(w => db.Contracts.Any(c => c.WorkerId == w.Id && c.ClientId == ownClientId));
+            }
 
             return Results.Ok(await query.OrderBy(w => w.FullName).Select(w => ToResponse(w)).ToListAsync());
         });
 
-        group.MapGet("/{id:guid}", async (Guid id, AtlasDbContext db) =>
+        group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var worker = await db.Workers.FindAsync(id);
-            return worker is null ? Results.NotFound() : Results.Ok(ToResponse(worker));
+            if (worker is null)
+            {
+                return Results.NotFound();
+            }
+            if (!user.IsPlatformAdmin())
+            {
+                var ownClientId = user.ClientIdOrNull();
+                var isOwnWorker = await db.Contracts.AnyAsync(c => c.WorkerId == id && c.ClientId == ownClientId);
+                if (!isOwnWorker)
+                {
+                    return Results.NotFound();
+                }
+            }
+
+            return Results.Ok(ToResponse(worker));
         });
 
         group.MapPost("/", async (CreateWorkerRequest request, AtlasDbContext db) =>
@@ -74,7 +96,7 @@ public static class WorkerEndpoints
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/workers/{worker.Id}", ToResponse(worker));
-        });
+        }).RequireAuthorization(AuthPolicies.PlatformAdmin);
 
         return app;
     }

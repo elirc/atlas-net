@@ -1,3 +1,4 @@
+using Atlas.Api.Auth;
 using Atlas.Domain;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
@@ -9,7 +10,8 @@ public static class PayrollEndpoints
 {
     public static IEndpointRouteBuilder MapPayrollEndpoints(this IEndpointRouteBuilder app)
     {
-        var runs = app.MapGroup("/api/payroll-runs");
+        // Payroll runs span every client in a country; they are platform operations.
+        var runs = app.MapGroup("/api/payroll-runs").RequireAuthorization(AuthPolicies.PlatformAdmin);
 
         runs.MapGet("/", async (string? countryCode, AtlasDbContext db) =>
         {
