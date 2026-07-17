@@ -8,6 +8,16 @@ and client invoicing — plus (v2) API-key auth with client-scoped roles, leave,
 amendments with salary history, multi-currency invoicing, benefits, notice-checked terminations with final
 pay, operational reports, and production hardening.
 
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [docs/getting-started.md](docs/getting-started.md) | Prerequisites, run & seed, curl walkthrough from country setup to invoice |
+| [docs/architecture.md](docs/architecture.md) | Layering, project responsibilities, domain invariants, the SQLite `DateTimeOffset` converter |
+| [docs/api-reference.md](docs/api-reference.md) | Every endpoint: method, route, required role, shapes, error codes |
+| [docs/testing.md](docs/testing.md) | Test taxonomy, how to run, what the integration harness does |
+| [docs/adr/](docs/adr/README.md) | Architecture decision records (auth, 404-vs-403, money rounding, concurrency, …) |
+
 ## Stack
 
 - .NET 10 / ASP.NET Core Web API (minimal APIs, no frontend)
@@ -190,5 +200,5 @@ countries/workers/policies/rates/plans, ...) return 409, and global `IExceptionH
   its own in-memory SQLite connection and a seeded platform-admin API key attached to every test client;
   payroll tests provision a private country each so run uniqueness never leaks between tests. A
   full-journey test walks country -> client -> worker -> contract -> onboarding -> compliance ->
-  payroll -> invoice through the public API only. 280 tests across domain unit tests and endpoint
-  integration tests.
+  payroll -> invoice through the public API only. 438 tests across domain unit tests and endpoint
+  integration tests — see [docs/testing.md](docs/testing.md).
