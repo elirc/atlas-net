@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("Atlas") ?? "Data Source=atlas.db";
 builder.Services.AddDbContext<AtlasDbContext>(options => options.UseSqlite(connectionString));
+builder.Services.AddScoped<PayrollService>();
 
 var app = builder.Build();
 
@@ -30,6 +31,8 @@ app.MapWorkerEndpoints();
 app.MapContractEndpoints();
 app.MapOnboardingEndpoints();
 app.MapComplianceEndpoints();
+app.MapPayrollEndpoints();
+app.MapInvoiceEndpoints();
 
 app.Run();
 

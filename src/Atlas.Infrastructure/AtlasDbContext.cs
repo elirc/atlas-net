@@ -16,6 +16,9 @@ public class AtlasDbContext : DbContext
     public DbSet<EmploymentContract> Contracts => Set<EmploymentContract>();
     public DbSet<OnboardingItem> OnboardingItems => Set<OnboardingItem>();
     public DbSet<ComplianceDocument> ComplianceDocuments => Set<ComplianceDocument>();
+    public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
+    public DbSet<Payslip> Payslips => Set<Payslip>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -69,6 +72,51 @@ public class AtlasDbContext : DbContext
             contract.HasOne(c => c.Country)
                 .WithMany()
                 .HasForeignKey(c => c.CountryCode)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PayrollRun>(run =>
+        {
+            run.HasKey(r => r.Id);
+            run.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+            run.HasIndex(r => new { r.CountryCode, r.Year, r.Month }).IsUnique();
+            run.HasOne(r => r.Country)
+                .WithMany()
+                .HasForeignKey(r => r.CountryCode)
+                .OnDelete(DeleteBehavior.Restrict);
+            run.HasMany(r => r.Payslips)
+                .WithOne(p => p.PayrollRun)
+                .HasForeignKey(p => p.PayrollRunId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Payslip>(payslip =>
+        {
+            payslip.HasKey(p => p.Id);
+            payslip.Property(p => p.CurrencyCode).HasMaxLength(3);
+            payslip.HasIndex(p => new { p.PayrollRunId, p.ContractId }).IsUnique();
+            payslip.HasIndex(p => p.ClientId);
+            payslip.HasIndex(p => p.WorkerId);
+            payslip.HasOne(p => p.Contract)
+                .WithMany()
+                .HasForeignKey(p => p.ContractId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Invoice>(invoice =>
+        {
+            invoice.HasKey(i => i.Id);
+            invoice.Property(i => i.InvoiceNumber).HasMaxLength(50);
+            invoice.Property(i => i.CurrencyCode).HasMaxLength(3);
+            invoice.HasIndex(i => i.InvoiceNumber).IsUnique();
+            invoice.HasIndex(i => new { i.PayrollRunId, i.ClientId }).IsUnique();
+            invoice.HasOne(i => i.Client)
+                .WithMany()
+                .HasForeignKey(i => i.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+            invoice.HasOne(i => i.PayrollRun)
+                .WithMany()
+                .HasForeignKey(i => i.PayrollRunId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
