@@ -134,6 +134,14 @@ public static class ContractEndpoints
             };
             db.Contracts.Add(contract);
             db.OnboardingItems.AddRange(OnboardingItem.CreateDefaultChecklist(contract.Id));
+            db.SalaryRecords.Add(new SalaryRecord
+            {
+                ContractId = contract.Id,
+                MonthlySalary = contract.MonthlySalary,
+                JobTitle = contract.JobTitle,
+                EffectiveDate = contract.StartDate,
+                Source = SalaryRecordSource.Initial,
+            });
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/contracts/{contract.Id}", ToResponse(contract));

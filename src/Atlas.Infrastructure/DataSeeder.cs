@@ -86,6 +86,14 @@ public static class DataSeeder
 
         foreach (var contract in new[] { mariaContract, jonasContract, priyaContract })
         {
+            db.SalaryRecords.Add(new SalaryRecord
+            {
+                ContractId = contract.Id,
+                MonthlySalary = contract.MonthlySalary,
+                JobTitle = contract.JobTitle,
+                EffectiveDate = contract.StartDate,
+                Source = SalaryRecordSource.Initial,
+            });
             var checklist = OnboardingItem.CreateDefaultChecklist(contract.Id);
             if (contract.Status == ContractStatus.Active)
             {

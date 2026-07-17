@@ -56,11 +56,19 @@ public class PayrollService
             .Include(e => e.Items)
             .Where(e => payableIds.Contains(e.ContractId) && e.Status == ExpenseClaimStatus.Approved)
             .ToListAsync();
+        var salaryRecords = await _db.SalaryRecords
+            .Where(r => payableIds.Contains(r.ContractId))
+            .ToListAsync();
         var nowUtc = DateTimeOffset.UtcNow;
 
         foreach (var contract in payable)
         {
-            var amounts = PayrollCalculator.Calculate(contract.MonthlySalary, country);
+            // Pay the terms effective for this period, not the contract's current
+            // terms — future-dated amendments must not leak into earlier months.
+            var effective = SalaryRecord.EffectiveForMonth(
+                salaryRecords.Where(r => r.ContractId == contract.Id), year, month);
+            var salary = effective?.MonthlySalary ?? contract.MonthlySalary;
+            var amounts = PayrollCalculator.Calculate(salary, country);
 
             var claims = claimsToReimburse.Where(e => e.ContractId == contract.Id).ToList();
             var reimbursements = PayrollCalculator.RoundMoney(claims.Sum(e => e.TotalAmount));

@@ -80,6 +80,35 @@ public class EmploymentContract
     }
 
     /// <summary>
+    /// Applies an approved amendment's changes to the contract's current terms.
+    /// The historical terms live in the contract's immutable salary records.
+    /// </summary>
+    public void ApplyAmendment(decimal? newMonthlySalary, string? newJobTitle)
+    {
+        if (Status != ContractStatus.Active)
+        {
+            throw new DomainException($"Only active contracts can be amended; this contract is {Status}.");
+        }
+        if (newMonthlySalary is null && string.IsNullOrWhiteSpace(newJobTitle))
+        {
+            throw new DomainException("An amendment must change the salary, the job title, or both.");
+        }
+        if (newMonthlySalary is <= 0)
+        {
+            throw new DomainException("The amended monthly salary must be greater than zero.");
+        }
+
+        if (newMonthlySalary is not null)
+        {
+            MonthlySalary = newMonthlySalary.Value;
+        }
+        if (!string.IsNullOrWhiteSpace(newJobTitle))
+        {
+            JobTitle = newJobTitle.Trim();
+        }
+    }
+
+    /// <summary>
     /// True when the contract has been activated and its employment period overlaps
     /// the given calendar month. Used by payroll to select contracts to pay.
     /// </summary>

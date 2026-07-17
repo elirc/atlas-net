@@ -24,6 +24,8 @@ public class AtlasDbContext : DbContext
     public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
     public DbSet<ExpenseClaim> ExpenseClaims => Set<ExpenseClaim>();
     public DbSet<ExpenseItem> ExpenseItems => Set<ExpenseItem>();
+    public DbSet<ContractAmendment> ContractAmendments => Set<ContractAmendment>();
+    public DbSet<SalaryRecord> SalaryRecords => Set<SalaryRecord>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -199,6 +201,32 @@ public class AtlasDbContext : DbContext
             item.HasKey(i => i.Id);
             item.Property(i => i.Description).HasMaxLength(300);
             item.Property(i => i.ReceiptUrl).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<ContractAmendment>(amendment =>
+        {
+            amendment.HasKey(a => a.Id);
+            amendment.Property(a => a.NewJobTitle).HasMaxLength(200);
+            amendment.Property(a => a.Reason).HasMaxLength(500);
+            amendment.Property(a => a.DecisionNote).HasMaxLength(500);
+            amendment.Property(a => a.Status).HasConversion<string>().HasMaxLength(20);
+            amendment.HasIndex(a => new { a.ContractId, a.Status });
+            amendment.HasOne(a => a.Contract)
+                .WithMany()
+                .HasForeignKey(a => a.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SalaryRecord>(record =>
+        {
+            record.HasKey(r => r.Id);
+            record.Property(r => r.JobTitle).HasMaxLength(200);
+            record.Property(r => r.Source).HasConversion<string>().HasMaxLength(20);
+            record.HasIndex(r => new { r.ContractId, r.EffectiveDate });
+            record.HasOne(r => r.Contract)
+                .WithMany()
+                .HasForeignKey(r => r.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ApiUser>(user =>
