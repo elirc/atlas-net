@@ -20,8 +20,13 @@ public static class BenefitEndpoints
     {
         var group = app.MapGroup("/api/benefit-plans").RequireAuthorization();
 
-        group.MapGet("/", async (string? countryCode, AtlasDbContext db) =>
+        group.MapGet("/", async (string? countryCode, int? page, int? pageSize, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.BenefitPlans.AsQueryable();
             if (!string.IsNullOrWhiteSpace(countryCode))
             {
@@ -29,7 +34,7 @@ public static class BenefitEndpoints
                 query = query.Where(p => p.CountryCode == code);
             }
 
-            var plans = await query.OrderBy(p => p.CountryCode).ThenBy(p => p.Name).ToListAsync();
+            var plans = await query.OrderBy(p => p.CountryCode).ThenBy(p => p.Name).ToPageAsync(http, paging);
             return Results.Ok(plans.Select(ToResponse).ToList());
         });
 
@@ -75,7 +80,9 @@ public static class BenefitEndpoints
             var name = request.Name!.Trim();
             if (await db.BenefitPlans.AnyAsync(p => p.CountryCode == code && p.Name == name))
             {
-                return Results.Conflict(new { detail = $"A benefit plan named '{name}' already exists in {code}." });
+                return Results.Problem(
+                    detail: $"A benefit plan named '{name}' already exists in {code}.",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             var plan = new BenefitPlan
@@ -110,8 +117,13 @@ public static class BenefitEndpoints
     {
         var group = app.MapGroup("/api/benefit-enrollments").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? contractId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? contractId, string? status, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.BenefitEnrollments.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -137,7 +149,7 @@ public static class BenefitEndpoints
             var enrollments = await query
                 .Include(e => e.BenefitPlan)
                 .OrderBy(e => e.StartDate).ThenBy(e => e.CreatedAtUtc)
-                .ToListAsync();
+                .ToPageAsync(http, paging);
             return Results.Ok(enrollments.Select(ToResponse).ToList());
         });
 

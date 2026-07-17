@@ -14,9 +14,12 @@ public enum AmendmentStatus
 /// Approval applies the change to the contract and appends an immutable
 /// <see cref="SalaryRecord"/>; a contract can hold only one pending amendment.
 /// </summary>
-public class ContractAmendment
+public class ContractAmendment : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required Guid ContractId { get; set; }
     public EmploymentContract? Contract { get; set; }

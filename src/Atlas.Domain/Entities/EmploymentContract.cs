@@ -11,9 +11,12 @@ public enum ContractStatus
 /// The employment relationship Atlas holds with a worker on behalf of a client.
 /// Lifecycle: Draft -> Active -> Terminated (one-way).
 /// </summary>
-public class EmploymentContract
+public class EmploymentContract : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required Guid ClientId { get; set; }
     public Client? Client { get; set; }

@@ -12,8 +12,13 @@ public static class ClientEndpoints
     {
         var group = app.MapGroup("/api/clients").RequireAuthorization();
 
-        group.MapGet("/", async (ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.Clients.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -21,7 +26,8 @@ public static class ClientEndpoints
                 query = query.Where(c => c.Id == ownClientId);
             }
 
-            return Results.Ok(await query.OrderBy(c => c.Name).Select(c => ToResponse(c)).ToListAsync());
+            var clients = await query.OrderBy(c => c.Name).ToPageAsync(http, paging);
+            return Results.Ok(clients.Select(ToResponse).ToList());
         });
 
         group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>

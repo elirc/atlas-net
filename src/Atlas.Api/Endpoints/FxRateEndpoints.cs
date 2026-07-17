@@ -11,8 +11,13 @@ public static class FxRateEndpoints
     {
         var group = app.MapGroup("/api/fx-rates").RequireAuthorization();
 
-        group.MapGet("/", async (string? baseCurrency, string? quoteCurrency, AtlasDbContext db) =>
+        group.MapGet("/", async (string? baseCurrency, string? quoteCurrency, int? page, int? pageSize, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.FxRates.AsQueryable();
             if (!string.IsNullOrWhiteSpace(baseCurrency))
             {
@@ -27,7 +32,7 @@ public static class FxRateEndpoints
 
             var rates = await query
                 .OrderBy(r => r.BaseCurrencyCode).ThenBy(r => r.QuoteCurrencyCode).ThenBy(r => r.EffectiveDate)
-                .ToListAsync();
+                .ToPageAsync(http, paging);
             return Results.Ok(rates.Select(ToResponse).ToList());
         });
 
@@ -71,10 +76,9 @@ public static class FxRateEndpoints
                 && r.EffectiveDate == request.EffectiveDate);
             if (exists)
             {
-                return Results.Conflict(new
-                {
-                    detail = $"An FX rate {baseCode}->{quoteCode} effective {request.EffectiveDate:yyyy-MM-dd} already exists.",
-                });
+                return Results.Problem(
+                    detail: $"An FX rate {baseCode}->{quoteCode} effective {request.EffectiveDate:yyyy-MM-dd} already exists.",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             var rate = new FxRate

@@ -12,8 +12,13 @@ public static class InvoiceEndpoints
     {
         var group = app.MapGroup("/api/invoices").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? clientId, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? clientId, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.Invoices.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -26,7 +31,7 @@ public static class InvoiceEndpoints
                 query = query.Where(i => i.ClientId == clientId);
             }
 
-            var invoices = await query.OrderBy(i => i.InvoiceNumber).ToListAsync();
+            var invoices = await query.OrderBy(i => i.InvoiceNumber).ToPageAsync(http, paging);
             return Results.Ok(invoices.Select(ToResponse).ToList());
         });
 

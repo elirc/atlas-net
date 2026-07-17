@@ -11,9 +11,14 @@ public static class ApiUserEndpoints
     {
         var group = app.MapGroup("/api/api-users").RequireAuthorization(AuthPolicies.PlatformAdmin);
 
-        group.MapGet("/", async (AtlasDbContext db) =>
+        group.MapGet("/", async (int? page, int? pageSize, HttpContext http, AtlasDbContext db) =>
         {
-            var users = await db.ApiUsers.OrderBy(u => u.CreatedAtUtc).ToListAsync();
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
+            var users = await db.ApiUsers.OrderBy(u => u.CreatedAtUtc).ToPageAsync(http, paging);
             return Results.Ok(users.Select(ToResponse).ToList());
         });
 

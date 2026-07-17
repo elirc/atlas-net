@@ -10,9 +10,12 @@ public enum PayrollRunStatus
 /// A payroll cycle for one country and one calendar month. Created as Draft with
 /// computed payslips; completing it is one-way and triggers client invoicing.
 /// </summary>
-public class PayrollRun
+public class PayrollRun : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required string CountryCode { get; set; }
     public Country? Country { get; set; }
