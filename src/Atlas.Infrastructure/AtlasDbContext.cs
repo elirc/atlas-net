@@ -29,6 +29,7 @@ public class AtlasDbContext : DbContext
     public DbSet<FxRate> FxRates => Set<FxRate>();
     public DbSet<BenefitPlan> BenefitPlans => Set<BenefitPlan>();
     public DbSet<BenefitEnrollment> BenefitEnrollments => Set<BenefitEnrollment>();
+    public DbSet<TerminationRequest> TerminationRequests => Set<TerminationRequest>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -267,6 +268,19 @@ public class AtlasDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.BenefitPlanId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TerminationRequest>(termination =>
+        {
+            termination.HasKey(t => t.Id);
+            termination.Property(t => t.Reason).HasMaxLength(500);
+            termination.Property(t => t.DecisionNote).HasMaxLength(500);
+            termination.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
+            termination.HasIndex(t => new { t.ContractId, t.Status });
+            termination.HasOne(t => t.Contract)
+                .WithMany()
+                .HasForeignKey(t => t.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ApiUser>(user =>

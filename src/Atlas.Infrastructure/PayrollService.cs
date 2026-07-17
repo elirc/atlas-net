@@ -63,6 +63,23 @@ public class PayrollService
             .Include(e => e.BenefitPlan)
             .Where(e => payableIds.Contains(e.ContractId))
             .ToListAsync();
+
+        // Final-pay inputs for contracts ending inside this month: the country's
+        // leave policy plus the leave the worker reserved in the end year.
+        var endingIds = payable
+            .Where(c => c.EndDate is not null && c.EndDate.Value.Year == year && c.EndDate.Value.Month == month)
+            .Select(c => c.Id)
+            .ToList();
+        var leavePolicy = endingIds.Count > 0
+            ? await _db.LeavePolicies.SingleOrDefaultAsync(p => p.CountryCode == country.Code)
+            : null;
+        var leaveRequests = endingIds.Count > 0
+            ? await _db.LeaveRequests
+                .Where(r => endingIds.Contains(r.ContractId)
+                            && r.Type == LeaveType.Annual
+                            && (r.Status == LeaveRequestStatus.Pending || r.Status == LeaveRequestStatus.Approved))
+                .ToListAsync()
+            : [];
         var nowUtc = DateTimeOffset.UtcNow;
 
         foreach (var contract in payable)
@@ -72,6 +89,25 @@ public class PayrollService
             var effective = SalaryRecord.EffectiveForMonth(
                 salaryRecords.Where(r => r.ContractId == contract.Id), year, month);
             var salary = effective?.MonthlySalary ?? contract.MonthlySalary;
+
+            // Final month: prorate by calendar days worked and pay out unused
+            // annual leave; both are part of the taxable gross.
+            var leavePayout = 0m;
+            if (endingIds.Contains(contract.Id))
+            {
+                var endDate = contract.EndDate!.Value;
+                var prorated = FinalPayCalculator.ProrateFinalMonth(salary, endDate);
+                if (leavePolicy is not null)
+                {
+                    var reserved = leaveRequests
+                        .Where(r => r.ContractId == contract.Id && r.StartDate.Year == endDate.Year)
+                        .Sum(r => r.Days);
+                    var unused = Math.Max(0, leavePolicy.AnnualLeaveDays - reserved);
+                    leavePayout = FinalPayCalculator.UnusedLeavePayout(salary, unused);
+                }
+                salary = prorated + leavePayout;
+            }
+
             var amounts = PayrollCalculator.Calculate(salary, country);
 
             var claims = claimsToReimburse.Where(e => e.ContractId == contract.Id).ToList();
@@ -102,6 +138,7 @@ public class PayrollService
                 Reimbursements = reimbursements,
                 BenefitsEmployerCost = benefitsEmployer,
                 BenefitsEmployeeDeduction = benefitsEmployee,
+                UnusedLeavePayout = leavePayout,
                 NetPay = amounts.NetPay - benefitsEmployee + reimbursements,
                 TotalCost = amounts.TotalCost + benefitsEmployer + reimbursements,
             });

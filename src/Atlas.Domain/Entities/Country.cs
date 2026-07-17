@@ -26,5 +26,11 @@ public class Country
     /// </summary>
     public required decimal EmployeeDeductionRate { get; set; }
 
+    /// <summary>
+    /// Minimum days of notice between giving notice and the last day of
+    /// employment for the standard termination flow.
+    /// </summary>
+    public int MinimumNoticeDays { get; set; } = 30;
+
     public bool IsActive { get; set; } = true;
 }

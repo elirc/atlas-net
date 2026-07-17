@@ -114,7 +114,7 @@ public static class PayrollEndpoints
             .Select(p => new PayslipResponse(
                 p.Id, p.PayrollRunId, p.ContractId, p.WorkerId, p.ClientId, p.CurrencyCode,
                 p.GrossSalary, p.EmployerCost, p.EmployeeDeductions, p.Reimbursements,
-                p.BenefitsEmployerCost, p.BenefitsEmployeeDeduction, p.NetPay, p.TotalCost))
+                p.BenefitsEmployerCost, p.BenefitsEmployeeDeduction, p.UnusedLeavePayout, p.NetPay, p.TotalCost))
             .ToList());
 }
 
@@ -150,6 +150,7 @@ public record PayslipResponse(
     decimal Reimbursements,
     decimal BenefitsEmployerCost,
     decimal BenefitsEmployeeDeduction,
+    decimal UnusedLeavePayout,
     decimal NetPay,
     decimal TotalCost);
 

@@ -33,6 +33,12 @@ public class Payslip
     /// <summary>Employee share of benefit premiums; deducted from the worker's net pay.</summary>
     public decimal BenefitsEmployeeDeduction { get; set; }
 
+    /// <summary>
+    /// Unused annual leave paid out on the final payslip (part of the taxable
+    /// gross). Zero except in the month a contract ends.
+    /// </summary>
+    public decimal UnusedLeavePayout { get; set; }
+
     /// <summary>Paid to the worker: gross - deductions - benefit deductions + reimbursements.</summary>
     public required decimal NetPay { get; set; }
 
