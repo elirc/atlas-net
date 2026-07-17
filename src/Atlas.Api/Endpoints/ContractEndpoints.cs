@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Atlas.Api.Auth;
 using Atlas.Domain;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
@@ -9,11 +11,17 @@ public static class ContractEndpoints
 {
     public static IEndpointRouteBuilder MapContractEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/contracts");
+        var group = app.MapGroup("/api/contracts").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? clientId, string? status, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? clientId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var query = db.Contracts.AsQueryable();
+            if (!user.IsPlatformAdmin())
+            {
+                // Client users always get their own contracts, whatever filter they pass.
+                var ownClientId = user.ClientIdOrNull();
+                query = query.Where(c => c.ClientId == ownClientId);
+            }
             if (clientId is not null)
             {
                 query = query.Where(c => c.ClientId == clientId);
@@ -34,13 +42,15 @@ public static class ContractEndpoints
             return Results.Ok(contracts.Select(ToResponse).ToList());
         });
 
-        group.MapGet("/{id:guid}", async (Guid id, AtlasDbContext db) =>
+        group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var contract = await db.Contracts.FindAsync(id);
-            return contract is null ? Results.NotFound() : Results.Ok(ToResponse(contract));
+            return contract is null || !user.CanViewClient(contract.ClientId)
+                ? Results.NotFound()
+                : Results.Ok(ToResponse(contract));
         });
 
-        group.MapPost("/", async (CreateContractRequest request, AtlasDbContext db) =>
+        group.MapPost("/", async (CreateContractRequest request, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var errors = new Dictionary<string, string[]>();
             if (request.ClientId == Guid.Empty)
@@ -66,6 +76,13 @@ public static class ContractEndpoints
             if (errors.Count > 0)
             {
                 return Results.ValidationProblem(errors);
+            }
+
+            if (!user.CanManageClient(request.ClientId))
+            {
+                return Results.Problem(
+                    detail: "Only platform admins or the client's own admins can create contracts for this client.",
+                    statusCode: StatusCodes.Status403Forbidden);
             }
 
             var client = await db.Clients.FindAsync(request.ClientId);
@@ -122,12 +139,18 @@ public static class ContractEndpoints
             return Results.Created($"/api/contracts/{contract.Id}", ToResponse(contract));
         });
 
-        group.MapPost("/{id:guid}/activate", async (Guid id, AtlasDbContext db) =>
+        group.MapPost("/{id:guid}/activate", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var contract = await db.Contracts.FindAsync(id);
-            if (contract is null)
+            if (contract is null || !user.CanViewClient(contract.ClientId))
             {
                 return Results.NotFound();
+            }
+            if (!user.CanManageClient(contract.ClientId))
+            {
+                return Results.Problem(
+                    detail: "Only platform admins or the client's own admins can activate contracts.",
+                    statusCode: StatusCodes.Status403Forbidden);
             }
 
             var pendingRequired = await db.OnboardingItems
@@ -154,12 +177,18 @@ public static class ContractEndpoints
             return Results.Ok(ToResponse(contract));
         });
 
-        group.MapPost("/{id:guid}/terminate", async (Guid id, TerminateContractRequest request, AtlasDbContext db) =>
+        group.MapPost("/{id:guid}/terminate", async (Guid id, TerminateContractRequest request, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var contract = await db.Contracts.FindAsync(id);
-            if (contract is null)
+            if (contract is null || !user.CanViewClient(contract.ClientId))
             {
                 return Results.NotFound();
+            }
+            if (!user.CanManageClient(contract.ClientId))
+            {
+                return Results.Problem(
+                    detail: "Only platform admins or the client's own admins can terminate contracts.",
+                    statusCode: StatusCodes.Status403Forbidden);
             }
 
             if (request.EndDate == default)

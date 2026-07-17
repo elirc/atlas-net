@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Atlas.Api.Auth;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,13 +10,22 @@ public static class ComplianceEndpoints
 {
     public static IEndpointRouteBuilder MapComplianceEndpoints(this IEndpointRouteBuilder app)
     {
-        var workerDocs = app.MapGroup("/api/workers/{workerId:guid}/documents");
+        var workerDocs = app.MapGroup("/api/workers/{workerId:guid}/documents").RequireAuthorization();
 
-        workerDocs.MapGet("/", async (Guid workerId, AtlasDbContext db) =>
+        workerDocs.MapGet("/", async (Guid workerId, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             if (!await db.Workers.AnyAsync(w => w.Id == workerId))
             {
                 return Results.NotFound();
+            }
+            if (!user.IsPlatformAdmin())
+            {
+                var ownClientId = user.ClientIdOrNull();
+                var isOwnWorker = await db.Contracts.AnyAsync(c => c.WorkerId == workerId && c.ClientId == ownClientId);
+                if (!isOwnWorker)
+                {
+                    return Results.NotFound();
+                }
             }
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -66,7 +77,7 @@ public static class ComplianceEndpoints
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             return Results.Created($"/api/workers/{workerId}/documents/{document.Id}", ToResponse(document, today));
-        });
+        }).RequireAuthorization(AuthPolicies.PlatformAdmin);
 
         app.MapGet("/api/compliance/expiring", async (int? withinDays, AtlasDbContext db) =>
         {
@@ -98,7 +109,7 @@ public static class ComplianceEndpoints
                     d.ExpiryDate!.Value,
                     d.GetStatus(today, window).ToString()))
                 .ToList());
-        });
+        }).RequireAuthorization(AuthPolicies.PlatformAdmin);
 
         return app;
     }

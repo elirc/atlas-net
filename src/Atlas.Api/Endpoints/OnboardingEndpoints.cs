@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Atlas.Api.Auth;
 using Atlas.Domain;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
@@ -9,11 +11,12 @@ public static class OnboardingEndpoints
 {
     public static IEndpointRouteBuilder MapOnboardingEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/contracts/{contractId:guid}/onboarding");
+        var group = app.MapGroup("/api/contracts/{contractId:guid}/onboarding").RequireAuthorization();
 
-        group.MapGet("/", async (Guid contractId, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid contractId, ClaimsPrincipal user, AtlasDbContext db) =>
         {
-            if (!await db.Contracts.AnyAsync(c => c.Id == contractId))
+            var contract = await db.Contracts.FindAsync(contractId);
+            if (contract is null || !user.CanViewClient(contract.ClientId))
             {
                 return Results.NotFound();
             }
@@ -30,13 +33,20 @@ public static class OnboardingEndpoints
         });
 
         group.MapPost("/{itemId:guid}/complete", async (
-            Guid contractId, Guid itemId, CompleteOnboardingItemRequest? request, AtlasDbContext db) =>
+            Guid contractId, Guid itemId, CompleteOnboardingItemRequest? request, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var item = await db.OnboardingItems
+                .Include(i => i.Contract)
                 .SingleOrDefaultAsync(i => i.Id == itemId && i.ContractId == contractId);
-            if (item is null)
+            if (item is null || !user.CanViewClient(item.Contract!.ClientId))
             {
                 return Results.NotFound();
+            }
+            if (!user.CanManageClient(item.Contract!.ClientId))
+            {
+                return Results.Problem(
+                    detail: "Only platform admins or the client's own admins can complete onboarding items.",
+                    statusCode: StatusCodes.Status403Forbidden);
             }
 
             try

@@ -1,6 +1,9 @@
 using Atlas.Api;
+using Atlas.Api.Auth;
 using Atlas.Api.Endpoints;
+using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Atlas") ?? "Data Source=atlas.db";
 builder.Services.AddDbContext<AtlasDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<PayrollService>();
+
+// API-key authentication (X-Api-Key header) with role/client-scope claims.
+builder.Services
+    .AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(AuthPolicies.PlatformAdmin, policy => policy.RequireRole(nameof(ApiRole.PlatformAdmin))));
 
 // RFC 7807 problem responses for unhandled errors and bare status codes.
 builder.Services.AddProblemDetails();
@@ -17,6 +27,9 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
@@ -41,6 +54,7 @@ app.MapOnboardingEndpoints();
 app.MapComplianceEndpoints();
 app.MapPayrollEndpoints();
 app.MapInvoiceEndpoints();
+app.MapApiUserEndpoints();
 
 app.Run();
 

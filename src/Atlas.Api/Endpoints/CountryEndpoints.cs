@@ -1,3 +1,4 @@
+using Atlas.Api.Auth;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ public static class CountryEndpoints
 {
     public static IEndpointRouteBuilder MapCountryEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/countries");
+        var group = app.MapGroup("/api/countries").RequireAuthorization();
 
         group.MapGet("/", async (AtlasDbContext db) =>
             Results.Ok(await db.Countries.OrderBy(c => c.Code).Select(c => ToResponse(c)).ToListAsync()));
@@ -65,7 +66,7 @@ public static class CountryEndpoints
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/countries/{country.Code}", ToResponse(country));
-        });
+        }).RequireAuthorization(AuthPolicies.PlatformAdmin);
 
         return app;
     }

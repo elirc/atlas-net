@@ -62,11 +62,28 @@ Invoice >──────┘  (one per client per completed run)
   (gross + employer costs) plus the client's management fee on gross, numbered `INV-yyyymm-CC-nnn`,
   in the payroll country's currency.
 
+## Authentication & authorization
+
+Every `/api/*` endpoint requires an API key in the `X-Api-Key` header (`/health` stays open).
+Keys belong to `ApiUser` rows with one of three roles:
+
+- **PlatformAdmin** — operates Atlas itself: full access, plus admin-only endpoints
+  (countries, clients, workers, compliance, payroll runs, API keys).
+- **ClientAdmin** — scoped to one client: sees that client's data and can create/activate/terminate
+  its contracts and complete onboarding items.
+- **ClientViewer** — read-only access scoped to one client.
+
+Client-scoped callers only ever see their own client, workers (via contracts), contracts, and
+invoices — cross-client reads return 404 (existence is not revealed) and insufficient-role writes
+return 403. Keys are issued via `POST /api/api-users` (full secret returned once, masked afterwards)
+and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creates `dev-admin-key`,
+`dev-acme-admin-key`, and `dev-acme-viewer-key`.
+
 ## API surface
 
 | Method & path | Purpose |
 | --- | --- |
-| `GET /health` | Liveness probe |
+| `GET /health` | Liveness probe (anonymous) |
 | `GET/POST /api/countries`, `GET /api/countries/{code}` | Supported hiring countries |
 | `GET/POST /api/clients`, `GET /api/clients/{id}` | Client companies |
 | `GET/POST /api/workers`, `GET /api/workers/{id}` | Workers (filter: `?countryCode=`) |
@@ -80,6 +97,7 @@ Invoice >──────┘  (one per client per completed run)
 | `GET/POST /api/payroll-runs`, `GET /api/payroll-runs/{id}` | Payroll runs with money totals and payslips |
 | `POST /api/payroll-runs/{id}/complete` | Complete a run and issue client invoices |
 | `GET /api/invoices`, `GET /api/invoices/{id}` | Invoices (filter: `?clientId=`) |
+| `GET/POST /api/api-users`, `POST /api/api-users/{id}/deactivate` | API keys (platform admin only) |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,

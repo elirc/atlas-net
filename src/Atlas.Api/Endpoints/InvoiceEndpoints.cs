@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Atlas.Api.Auth;
 using Atlas.Domain.Entities;
 using Atlas.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,11 +10,17 @@ public static class InvoiceEndpoints
 {
     public static IEndpointRouteBuilder MapInvoiceEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/invoices");
+        var group = app.MapGroup("/api/invoices").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? clientId, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? clientId, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var query = db.Invoices.AsQueryable();
+            if (!user.IsPlatformAdmin())
+            {
+                // Client users always get their own invoices, whatever filter they pass.
+                var ownClientId = user.ClientIdOrNull();
+                query = query.Where(i => i.ClientId == ownClientId);
+            }
             if (clientId is not null)
             {
                 query = query.Where(i => i.ClientId == clientId);
@@ -22,10 +30,12 @@ public static class InvoiceEndpoints
             return Results.Ok(invoices.Select(ToResponse).ToList());
         });
 
-        group.MapGet("/{id:guid}", async (Guid id, AtlasDbContext db) =>
+        group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>
         {
             var invoice = await db.Invoices.FindAsync(id);
-            return invoice is null ? Results.NotFound() : Results.Ok(ToResponse(invoice));
+            return invoice is null || !user.CanViewClient(invoice.ClientId)
+                ? Results.NotFound()
+                : Results.Ok(ToResponse(invoice));
         });
 
         return app;
