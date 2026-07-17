@@ -11,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Atlas") ?? "Data Source=atlas.db";
 builder.Services.AddDbContext<AtlasDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<PayrollService>();
+builder.Services.AddScoped<LeaveService>();
 
 // API-key authentication (X-Api-Key header) with role/client-scope claims.
 builder.Services
@@ -55,6 +56,7 @@ app.MapComplianceEndpoints();
 app.MapPayrollEndpoints();
 app.MapInvoiceEndpoints();
 app.MapApiUserEndpoints();
+app.MapLeaveEndpoints();
 
 app.Run();
 

@@ -20,6 +20,8 @@ public class AtlasDbContext : DbContext
     public DbSet<Payslip> Payslips => Set<Payslip>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<ApiUser> ApiUsers => Set<ApiUser>();
+    public DbSet<LeavePolicy> LeavePolicies => Set<LeavePolicy>();
+    public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -144,6 +146,30 @@ public class AtlasDbContext : DbContext
             doc.HasOne(d => d.Worker)
                 .WithMany()
                 .HasForeignKey(d => d.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LeavePolicy>(policy =>
+        {
+            policy.HasKey(p => p.Id);
+            policy.HasIndex(p => p.CountryCode).IsUnique();
+            policy.HasOne(p => p.Country)
+                .WithMany()
+                .HasForeignKey(p => p.CountryCode)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LeaveRequest>(request =>
+        {
+            request.HasKey(r => r.Id);
+            request.Property(r => r.Type).HasConversion<string>().HasMaxLength(20);
+            request.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+            request.Property(r => r.Reason).HasMaxLength(500);
+            request.Property(r => r.DecisionNote).HasMaxLength(500);
+            request.HasIndex(r => new { r.ContractId, r.Status });
+            request.HasOne(r => r.Contract)
+                .WithMany()
+                .HasForeignKey(r => r.ContractId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

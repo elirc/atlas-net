@@ -97,6 +97,24 @@ public static class DataSeeder
             db.OnboardingItems.AddRange(checklist);
         }
 
+        db.LeavePolicies.AddRange(
+            new LeavePolicy { CountryCode = "US", AnnualLeaveDays = 15, SickLeaveDays = 10 },
+            new LeavePolicy { CountryCode = "GB", AnnualLeaveDays = 28, SickLeaveDays = 10 },
+            new LeavePolicy { CountryCode = "DE", AnnualLeaveDays = 30, SickLeaveDays = 20 },
+            new LeavePolicy { CountryCode = "PH", AnnualLeaveDays = 15, SickLeaveDays = 15 },
+            new LeavePolicy { CountryCode = "BR", AnnualLeaveDays = 30, SickLeaveDays = 15 },
+            new LeavePolicy { CountryCode = "IN", AnnualLeaveDays = 18, SickLeaveDays = 12 });
+
+        db.LeaveRequests.Add(new LeaveRequest
+        {
+            ContractId = mariaContract.Id,
+            Type = LeaveType.Annual,
+            StartDate = new DateOnly(2026, 8, 3),
+            EndDate = new DateOnly(2026, 8, 7),
+            Days = 5,
+            Reason = "Family holiday",
+        });
+
         db.ApiUsers.AddRange(
             new ApiUser { Name = "Atlas Ops (dev)", ApiKey = "dev-admin-key", Role = ApiRole.PlatformAdmin },
             new ApiUser { Name = "Acme Robotics admin (dev)", ApiKey = "dev-acme-admin-key", Role = ApiRole.ClientAdmin, ClientId = acme.Id },
