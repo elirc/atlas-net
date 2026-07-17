@@ -23,8 +23,13 @@ public class Payslip
     public required decimal GrossSalary { get; set; }
     public required decimal EmployerCost { get; set; }
     public required decimal EmployeeDeductions { get; set; }
+
+    /// <summary>Approved expense claims paid out with this payslip (untaxed pass-through).</summary>
+    public decimal Reimbursements { get; set; }
+
+    /// <summary>Paid to the worker: gross - deductions + reimbursements.</summary>
     public required decimal NetPay { get; set; }
 
-    /// <summary>Gross + employer cost: what the client is billed for this worker.</summary>
+    /// <summary>Gross + employer cost + reimbursements: what the client is billed for this worker.</summary>
     public required decimal TotalCost { get; set; }
 }

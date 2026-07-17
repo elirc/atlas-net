@@ -21,7 +21,9 @@ public class PayrollService
     /// <summary>
     /// Creates a draft payroll run for the country/month and computes its payslips.
     /// Contracts are paid for a full month when their employment period covers any
-    /// part of that calendar month (simplified: no day-based proration).
+    /// part of that calendar month (simplified: no day-based proration). Approved,
+    /// not-yet-reimbursed expense claims are paid out with the run and marked
+    /// Reimbursed (added untaxed to net pay and billed on to the client).
     /// </summary>
     public async Task<PayrollRun> CreateRunAsync(string countryCode, int year, int month)
     {
@@ -49,9 +51,24 @@ public class PayrollService
 
         var run = new PayrollRun { CountryCode = country.Code, Year = year, Month = month };
 
+        var payableIds = payable.Select(c => c.Id).ToList();
+        var claimsToReimburse = await _db.ExpenseClaims
+            .Include(e => e.Items)
+            .Where(e => payableIds.Contains(e.ContractId) && e.Status == ExpenseClaimStatus.Approved)
+            .ToListAsync();
+        var nowUtc = DateTimeOffset.UtcNow;
+
         foreach (var contract in payable)
         {
             var amounts = PayrollCalculator.Calculate(contract.MonthlySalary, country);
+
+            var claims = claimsToReimburse.Where(e => e.ContractId == contract.Id).ToList();
+            var reimbursements = PayrollCalculator.RoundMoney(claims.Sum(e => e.TotalAmount));
+            foreach (var claim in claims)
+            {
+                claim.MarkReimbursed(run.Id, nowUtc);
+            }
+
             run.Payslips.Add(new Payslip
             {
                 PayrollRunId = run.Id,
@@ -62,8 +79,9 @@ public class PayrollService
                 GrossSalary = amounts.Gross,
                 EmployerCost = amounts.EmployerCost,
                 EmployeeDeductions = amounts.EmployeeDeductions,
-                NetPay = amounts.NetPay,
-                TotalCost = amounts.TotalCost,
+                Reimbursements = reimbursements,
+                NetPay = amounts.NetPay + reimbursements,
+                TotalCost = amounts.TotalCost + reimbursements,
             });
         }
 

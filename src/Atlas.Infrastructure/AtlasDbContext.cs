@@ -22,6 +22,8 @@ public class AtlasDbContext : DbContext
     public DbSet<ApiUser> ApiUsers => Set<ApiUser>();
     public DbSet<LeavePolicy> LeavePolicies => Set<LeavePolicy>();
     public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
+    public DbSet<ExpenseClaim> ExpenseClaims => Set<ExpenseClaim>();
+    public DbSet<ExpenseItem> ExpenseItems => Set<ExpenseItem>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -171,6 +173,32 @@ public class AtlasDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(r => r.ContractId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExpenseClaim>(claim =>
+        {
+            claim.HasKey(e => e.Id);
+            claim.Property(e => e.CurrencyCode).HasMaxLength(3);
+            claim.Property(e => e.Description).HasMaxLength(500);
+            claim.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            claim.Property(e => e.DecisionNote).HasMaxLength(500);
+            claim.HasIndex(e => new { e.ContractId, e.Status });
+            claim.HasIndex(e => e.ReimbursedInPayrollRunId);
+            claim.HasOne(e => e.Contract)
+                .WithMany()
+                .HasForeignKey(e => e.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+            claim.HasMany(e => e.Items)
+                .WithOne(i => i.ExpenseClaim)
+                .HasForeignKey(i => i.ExpenseClaimId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExpenseItem>(item =>
+        {
+            item.HasKey(i => i.Id);
+            item.Property(i => i.Description).HasMaxLength(300);
+            item.Property(i => i.ReceiptUrl).HasMaxLength(2000);
         });
 
         modelBuilder.Entity<ApiUser>(user =>

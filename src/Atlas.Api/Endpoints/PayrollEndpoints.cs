@@ -99,6 +99,7 @@ public static class PayrollEndpoints
         r.Payslips.Count,
         r.Payslips.Sum(p => p.GrossSalary),
         r.Payslips.Sum(p => p.EmployerCost),
+        r.Payslips.Sum(p => p.Reimbursements),
         r.Payslips.Sum(p => p.NetPay),
         r.Payslips.Sum(p => p.TotalCost),
         r.CreatedAtUtc,
@@ -110,7 +111,7 @@ public static class PayrollEndpoints
             .OrderBy(p => p.ContractId)
             .Select(p => new PayslipResponse(
                 p.Id, p.PayrollRunId, p.ContractId, p.WorkerId, p.ClientId, p.CurrencyCode,
-                p.GrossSalary, p.EmployerCost, p.EmployeeDeductions, p.NetPay, p.TotalCost))
+                p.GrossSalary, p.EmployerCost, p.EmployeeDeductions, p.Reimbursements, p.NetPay, p.TotalCost))
             .ToList());
 }
 
@@ -125,6 +126,7 @@ public record PayrollRunSummaryResponse(
     int PayslipCount,
     decimal TotalGross,
     decimal TotalEmployerCost,
+    decimal TotalReimbursements,
     decimal TotalNet,
     decimal TotalCost,
     DateTimeOffset CreatedAtUtc,
@@ -140,6 +142,7 @@ public record PayslipResponse(
     decimal GrossSalary,
     decimal EmployerCost,
     decimal EmployeeDeductions,
+    decimal Reimbursements,
     decimal NetPay,
     decimal TotalCost);
 
