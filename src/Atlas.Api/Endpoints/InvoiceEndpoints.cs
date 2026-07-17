@@ -50,6 +50,9 @@ public static class InvoiceEndpoints
         i.PayrollSubtotal,
         i.ManagementFee,
         i.Total,
+        i.BillingCurrencyCode,
+        i.FxRateApplied,
+        i.TotalInBillingCurrency,
         i.IssuedAtUtc);
 }
 
@@ -62,4 +65,7 @@ public record InvoiceResponse(
     decimal PayrollSubtotal,
     decimal ManagementFee,
     decimal Total,
+    string BillingCurrencyCode,
+    decimal FxRateApplied,
+    decimal TotalInBillingCurrency,
     DateTimeOffset IssuedAtUtc);

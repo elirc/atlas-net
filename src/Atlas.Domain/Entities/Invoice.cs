@@ -17,16 +17,26 @@ public class Invoice
     public required Guid PayrollRunId { get; set; }
     public PayrollRun? PayrollRun { get; set; }
 
-    /// <summary>ISO 4217 currency of all amounts (the payroll country's currency).</summary>
+    /// <summary>ISO 4217 currency of the local amounts (the payroll country's currency).</summary>
     public required string CurrencyCode { get; set; }
 
-    /// <summary>Sum of TotalCost (gross + employer cost) across the client's payslips.</summary>
+    /// <summary>Sum of TotalCost (gross + employer cost + reimbursements) across the client's payslips.</summary>
     public required decimal PayrollSubtotal { get; set; }
 
     /// <summary>Client's management fee rate applied to the gross payroll.</summary>
     public required decimal ManagementFee { get; set; }
 
+    /// <summary>Subtotal + fee in the payroll country's currency.</summary>
     public required decimal Total { get; set; }
+
+    /// <summary>ISO 4217 currency the client is billed in.</summary>
+    public required string BillingCurrencyCode { get; set; }
+
+    /// <summary>Rate applied to convert Total into the billing currency (1 when identical).</summary>
+    public required decimal FxRateApplied { get; set; }
+
+    /// <summary>Total converted into the billing currency at the period rate, rounded to 2 dp.</summary>
+    public required decimal TotalInBillingCurrency { get; set; }
 
     public DateTimeOffset IssuedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

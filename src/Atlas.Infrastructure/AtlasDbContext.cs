@@ -26,6 +26,7 @@ public class AtlasDbContext : DbContext
     public DbSet<ExpenseItem> ExpenseItems => Set<ExpenseItem>();
     public DbSet<ContractAmendment> ContractAmendments => Set<ContractAmendment>();
     public DbSet<SalaryRecord> SalaryRecords => Set<SalaryRecord>();
+    public DbSet<FxRate> FxRates => Set<FxRate>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -51,6 +52,7 @@ public class AtlasDbContext : DbContext
             client.Property(c => c.Name).HasMaxLength(200);
             client.Property(c => c.LegalName).HasMaxLength(200);
             client.Property(c => c.BillingEmail).HasMaxLength(320);
+            client.Property(c => c.BillingCurrencyCode).HasMaxLength(3);
             client.HasIndex(c => c.Name);
             client.HasOne<Country>()
                 .WithMany()
@@ -115,6 +117,7 @@ public class AtlasDbContext : DbContext
             invoice.HasKey(i => i.Id);
             invoice.Property(i => i.InvoiceNumber).HasMaxLength(50);
             invoice.Property(i => i.CurrencyCode).HasMaxLength(3);
+            invoice.Property(i => i.BillingCurrencyCode).HasMaxLength(3);
             invoice.HasIndex(i => i.InvoiceNumber).IsUnique();
             invoice.HasIndex(i => new { i.PayrollRunId, i.ClientId }).IsUnique();
             invoice.HasOne(i => i.Client)
@@ -227,6 +230,14 @@ public class AtlasDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(r => r.ContractId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FxRate>(rate =>
+        {
+            rate.HasKey(r => r.Id);
+            rate.Property(r => r.BaseCurrencyCode).HasMaxLength(3);
+            rate.Property(r => r.QuoteCurrencyCode).HasMaxLength(3);
+            rate.HasIndex(r => new { r.BaseCurrencyCode, r.QuoteCurrencyCode, r.EffectiveDate }).IsUnique();
         });
 
         modelBuilder.Entity<ApiUser>(user =>

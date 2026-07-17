@@ -51,13 +51,18 @@ public static class ClientEndpoints
             {
                 errors["managementFeeRate"] = ["ManagementFeeRate must be a fraction in [0, 1)."];
             }
+            if (request.BillingCurrencyCode is not null && request.BillingCurrencyCode.Trim().Length != 3)
+            {
+                errors["billingCurrencyCode"] = ["BillingCurrencyCode must be a 3-letter ISO 4217 code."];
+            }
             if (errors.Count > 0)
             {
                 return Results.ValidationProblem(errors);
             }
 
             var countryCode = request.HeadquartersCountryCode!.Trim().ToUpperInvariant();
-            if (!await db.Countries.AnyAsync(c => c.Code == countryCode))
+            var country = await db.Countries.FindAsync(countryCode);
+            if (country is null)
             {
                 return Results.ValidationProblem(new Dictionary<string, string[]>
                 {
@@ -72,6 +77,7 @@ public static class ClientEndpoints
                 BillingEmail = request.BillingEmail!.Trim(),
                 HeadquartersCountryCode = countryCode,
                 ManagementFeeRate = request.ManagementFeeRate ?? 0.10m,
+                BillingCurrencyCode = request.BillingCurrencyCode?.Trim().ToUpperInvariant() ?? country.CurrencyCode,
             };
             db.Clients.Add(client);
             await db.SaveChangesAsync();
@@ -83,7 +89,7 @@ public static class ClientEndpoints
     }
 
     private static ClientResponse ToResponse(Client c) =>
-        new(c.Id, c.Name, c.LegalName, c.BillingEmail, c.HeadquartersCountryCode, c.ManagementFeeRate, c.CreatedAtUtc);
+        new(c.Id, c.Name, c.LegalName, c.BillingEmail, c.HeadquartersCountryCode, c.ManagementFeeRate, c.BillingCurrencyCode, c.CreatedAtUtc);
 }
 
 public record CreateClientRequest(
@@ -91,7 +97,8 @@ public record CreateClientRequest(
     string? LegalName,
     string? BillingEmail,
     string? HeadquartersCountryCode,
-    decimal? ManagementFeeRate);
+    decimal? ManagementFeeRate,
+    string? BillingCurrencyCode);
 
 public record ClientResponse(
     Guid Id,
@@ -100,4 +107,5 @@ public record ClientResponse(
     string BillingEmail,
     string HeadquartersCountryCode,
     decimal ManagementFeeRate,
+    string BillingCurrencyCode,
     DateTimeOffset CreatedAtUtc);

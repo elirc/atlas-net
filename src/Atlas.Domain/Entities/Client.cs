@@ -15,6 +15,13 @@ public class Client
     public required string HeadquartersCountryCode { get; set; }
 
     /// <summary>
+    /// ISO 4217 currency the client is invoiced in; defaults to the headquarters
+    /// country's currency. Payroll stays in each worker's local currency and the
+    /// invoice converts at the rate effective for the payroll period.
+    /// </summary>
+    public required string BillingCurrencyCode { get; set; }
+
+    /// <summary>
     /// Atlas management fee as a fraction of gross payroll billed on each
     /// invoice, e.g. 0.10 for 10%.
     /// </summary>

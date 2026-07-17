@@ -99,8 +99,10 @@ public class PayrollService
     }
 
     /// <summary>
-    /// Completes a draft run and issues one invoice per client:
-    /// payroll subtotal (gross + employer costs) plus the client's management fee on gross.
+    /// Completes a draft run and issues one invoice per client: payroll subtotal
+    /// (gross + employer costs + reimbursements) plus the client's management fee
+    /// on gross, in the payroll country's currency, converted into the client's
+    /// billing currency at the FX rate effective for the payroll period.
     /// </summary>
     public async Task<(PayrollRun Run, List<Invoice> Invoices)> CompleteRunAsync(Guid runId)
     {
@@ -114,6 +116,16 @@ public class PayrollService
         var clientIds = run.Payslips.Select(p => p.ClientId).Distinct().ToList();
         var clients = await _db.Clients.Where(c => clientIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
 
+        var localCurrency = run.Payslips[0].CurrencyCode;
+        var billingCurrencies = clients.Values
+            .Select(c => c.BillingCurrencyCode)
+            .Where(code => code != localCurrency)
+            .Distinct()
+            .ToList();
+        var rates = await _db.FxRates
+            .Where(r => r.BaseCurrencyCode == localCurrency && billingCurrencies.Contains(r.QuoteCurrencyCode))
+            .ToListAsync();
+
         var invoices = new List<Invoice>();
         var sequence = 1;
         foreach (var clientId in clientIds.OrderBy(id => clients[id].Name))
@@ -123,16 +135,31 @@ public class PayrollService
             var subtotal = slips.Sum(p => p.TotalCost);
             var grossSum = slips.Sum(p => p.GrossSalary);
             var fee = PayrollCalculator.RoundMoney(grossSum * client.ManagementFeeRate);
+            var total = subtotal + fee;
+
+            var fxRate = 1m;
+            if (client.BillingCurrencyCode != localCurrency)
+            {
+                var effective = FxRate.EffectiveForMonth(
+                    rates.Where(r => r.QuoteCurrencyCode == client.BillingCurrencyCode), run.Year, run.Month)
+                    ?? throw new DomainException(
+                        $"No FX rate from {localCurrency} to {client.BillingCurrencyCode} is effective for {run.Year}-{run.Month:00}; " +
+                        $"add one before completing the run.");
+                fxRate = effective.Rate;
+            }
 
             invoices.Add(new Invoice
             {
                 InvoiceNumber = $"INV-{run.Year}{run.Month:00}-{run.CountryCode}-{sequence:000}",
                 ClientId = clientId,
                 PayrollRunId = run.Id,
-                CurrencyCode = slips[0].CurrencyCode,
+                CurrencyCode = localCurrency,
                 PayrollSubtotal = subtotal,
                 ManagementFee = fee,
-                Total = subtotal + fee,
+                Total = total,
+                BillingCurrencyCode = client.BillingCurrencyCode,
+                FxRateApplied = fxRate,
+                TotalInBillingCurrency = PayrollCalculator.RoundMoney(total * fxRate),
             });
             sequence++;
         }
