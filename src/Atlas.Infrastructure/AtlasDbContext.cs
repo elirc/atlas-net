@@ -13,6 +13,7 @@ public class AtlasDbContext : DbContext
     public DbSet<Country> Countries => Set<Country>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Worker> Workers => Set<Worker>();
+    public DbSet<EmploymentContract> Contracts => Set<EmploymentContract>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

@@ -27,6 +27,7 @@ app.MapGet("/health", () => Results.Ok(new
 app.MapCountryEndpoints();
 app.MapClientEndpoints();
 app.MapWorkerEndpoints();
+app.MapContractEndpoints();
 
 app.Run();
 

@@ -41,11 +41,48 @@ public static class DataSeeder
         };
         db.Clients.AddRange(acme, nordwind);
 
-        db.Workers.AddRange(
-            new Worker { FullName = "Maria Santos", Email = "maria.santos@example.com", CountryCode = "PH", DateOfBirth = new DateOnly(1993, 4, 12) },
-            new Worker { FullName = "Jonas Weber", Email = "jonas.weber@example.com", CountryCode = "DE", DateOfBirth = new DateOnly(1988, 11, 3) },
-            new Worker { FullName = "Priya Nair", Email = "priya.nair@example.com", CountryCode = "IN", DateOfBirth = new DateOnly(1996, 7, 25) },
-            new Worker { FullName = "Lucas Oliveira", Email = "lucas.oliveira@example.com", CountryCode = "BR", DateOfBirth = new DateOnly(1990, 1, 30) });
+        var maria = new Worker { FullName = "Maria Santos", Email = "maria.santos@example.com", CountryCode = "PH", DateOfBirth = new DateOnly(1993, 4, 12) };
+        var jonas = new Worker { FullName = "Jonas Weber", Email = "jonas.weber@example.com", CountryCode = "DE", DateOfBirth = new DateOnly(1988, 11, 3) };
+        var priya = new Worker { FullName = "Priya Nair", Email = "priya.nair@example.com", CountryCode = "IN", DateOfBirth = new DateOnly(1996, 7, 25) };
+        var lucas = new Worker { FullName = "Lucas Oliveira", Email = "lucas.oliveira@example.com", CountryCode = "BR", DateOfBirth = new DateOnly(1990, 1, 30) };
+        db.Workers.AddRange(maria, jonas, priya, lucas);
+
+        var mariaContract = new EmploymentContract
+        {
+            ClientId = acme.Id,
+            WorkerId = maria.Id,
+            CountryCode = "PH",
+            JobTitle = "Senior Software Engineer",
+            MonthlySalary = 180_000m,
+            CurrencyCode = "PHP",
+            StartDate = new DateOnly(2026, 1, 1),
+        };
+        mariaContract.Activate(DateTimeOffset.UtcNow);
+
+        var jonasContract = new EmploymentContract
+        {
+            ClientId = nordwind.Id,
+            WorkerId = jonas.Id,
+            CountryCode = "DE",
+            JobTitle = "Data Analyst",
+            MonthlySalary = 5_500m,
+            CurrencyCode = "EUR",
+            StartDate = new DateOnly(2026, 3, 1),
+        };
+        jonasContract.Activate(DateTimeOffset.UtcNow);
+
+        var priyaContract = new EmploymentContract
+        {
+            ClientId = acme.Id,
+            WorkerId = priya.Id,
+            CountryCode = "IN",
+            JobTitle = "QA Engineer",
+            MonthlySalary = 150_000m,
+            CurrencyCode = "INR",
+            StartDate = new DateOnly(2026, 8, 1),
+        };
+
+        db.Contracts.AddRange(mariaContract, jonasContract, priyaContract);
 
         db.SaveChanges();
     }
