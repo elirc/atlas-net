@@ -72,6 +72,12 @@ Invoice >──────┘  (one per client per completed run)
   payroll run pays out every approved, not-yet-reimbursed claim of the contracts in the run:
   reimbursements are added untaxed to net pay, billed to the client at cost on the invoice
   (management fee applies to gross salary only), and the claim records the reimbursing run.
+- **Contract amendments** change an active contract's salary and/or job title from an effective
+  date (`Pending -> Approved | Rejected | Cancelled`, one pending per contract). Approval updates
+  the contract's current terms and appends to an immutable, append-only salary history that starts
+  with the hiring terms. Payroll pays the terms effective for each period — the latest record
+  effective on or before the month's end — so future-dated raises never leak into earlier months
+  (mid-month changes apply to the whole month; no proration).
 
 ## Authentication & authorization
 
@@ -115,6 +121,9 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `GET /api/contracts/{id}/leave-balances?year=N` | Per-type allowance/used/pending/remaining |
 | `GET/POST /api/expense-claims`, `GET /api/expense-claims/{id}` | Expense claims (filters: `?contractId=`, `?status=`) |
 | `POST /api/expense-claims/{id}/approve\|reject` | Expense approval flow |
+| `GET/POST /api/contract-amendments`, `GET /api/contract-amendments/{id}` | Amendments (filters: `?contractId=`, `?status=`) |
+| `POST /api/contract-amendments/{id}/approve\|reject\|cancel` | Amendment approval flow |
+| `GET /api/contracts/{id}/salary-history` | Immutable salary/title history |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,
