@@ -67,6 +67,11 @@ Invoice >──────┘  (one per client per completed run)
   remaining balance — pending requests reserve days; rejection/cancellation releases them.
   Lifecycle: `Pending -> Approved | Rejected` (client decision, note required to reject) or
   `Pending -> Cancelled` (withdrawn).
+- **Expense claims** carry line items (positive amounts, receipts as http(s) URLs) in the
+  contract's local currency and follow `Pending -> Approved | Rejected -> Reimbursed`. Creating a
+  payroll run pays out every approved, not-yet-reimbursed claim of the contracts in the run:
+  reimbursements are added untaxed to net pay, billed to the client at cost on the invoice
+  (management fee applies to gross salary only), and the claim records the reimbursing run.
 
 ## Authentication & authorization
 
@@ -108,6 +113,8 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `GET/POST /api/leave-requests`, `GET /api/leave-requests/{id}` | Leave requests (filters: `?contractId=`, `?status=`) |
 | `POST /api/leave-requests/{id}/approve\|reject\|cancel` | Leave approval flow |
 | `GET /api/contracts/{id}/leave-balances?year=N` | Per-type allowance/used/pending/remaining |
+| `GET/POST /api/expense-claims`, `GET /api/expense-claims/{id}` | Expense claims (filters: `?contractId=`, `?status=`) |
+| `POST /api/expense-claims/{id}/approve\|reject` | Expense approval flow |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,

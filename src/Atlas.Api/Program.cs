@@ -57,6 +57,7 @@ app.MapPayrollEndpoints();
 app.MapInvoiceEndpoints();
 app.MapApiUserEndpoints();
 app.MapLeaveEndpoints();
+app.MapExpenseEndpoints();
 
 app.Run();
 
