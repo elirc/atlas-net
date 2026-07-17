@@ -84,6 +84,46 @@ public static class DataSeeder
 
         db.Contracts.AddRange(mariaContract, jonasContract, priyaContract);
 
+        foreach (var contract in new[] { mariaContract, jonasContract, priyaContract })
+        {
+            var checklist = OnboardingItem.CreateDefaultChecklist(contract.Id);
+            if (contract.Status == ContractStatus.Active)
+            {
+                foreach (var item in checklist.Where(i => i.IsRequired))
+                {
+                    item.Complete(DateTimeOffset.UtcNow, "Verified during seeding");
+                }
+            }
+            db.OnboardingItems.AddRange(checklist);
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        db.ComplianceDocuments.AddRange(
+            new ComplianceDocument
+            {
+                WorkerId = maria.Id,
+                Type = ComplianceDocumentType.Passport,
+                Name = "Philippine passport",
+                IssuedDate = today.AddYears(-4),
+                ExpiryDate = today.AddYears(6),
+            },
+            new ComplianceDocument
+            {
+                WorkerId = jonas.Id,
+                Type = ComplianceDocumentType.WorkPermit,
+                Name = "EU work permit",
+                IssuedDate = today.AddYears(-1),
+                ExpiryDate = today.AddDays(21), // shows up in the expiring-soon report
+            },
+            new ComplianceDocument
+            {
+                WorkerId = priya.Id,
+                Type = ComplianceDocumentType.ProfessionalCertification,
+                Name = "ISTQB certification",
+                IssuedDate = today.AddYears(-3),
+                ExpiryDate = today.AddDays(-10), // already expired
+            });
+
         db.SaveChanges();
     }
 }

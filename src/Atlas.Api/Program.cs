@@ -28,6 +28,8 @@ app.MapCountryEndpoints();
 app.MapClientEndpoints();
 app.MapWorkerEndpoints();
 app.MapContractEndpoints();
+app.MapOnboardingEndpoints();
+app.MapComplianceEndpoints();
 
 app.Run();
 

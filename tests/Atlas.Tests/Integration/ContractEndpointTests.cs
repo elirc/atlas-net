@@ -52,6 +52,23 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
         return (client!.Id, worker!.Id);
     }
 
+    /// <summary>Completes every required onboarding item so the contract can be activated.</summary>
+    private void CompleteRequiredOnboarding(Guid contractId) =>
+        _factory.WithDb(db =>
+        {
+            foreach (var item in db.OnboardingItems.Where(i => i.ContractId == contractId && i.IsRequired && !i.IsCompleted))
+            {
+                item.Complete(DateTimeOffset.UtcNow);
+            }
+            db.SaveChanges();
+        });
+
+    private async Task<HttpResponseMessage> ActivateAsync(Guid contractId)
+    {
+        CompleteRequiredOnboarding(contractId);
+        return await _client.PostAsync($"/api/contracts/{contractId}/activate", null);
+    }
+
     private async Task<ContractResponse> CreateDraftContractAsync(Guid clientId, Guid workerId)
     {
         var response = await _client.PostAsJsonAsync("/api/contracts", new
@@ -138,7 +155,7 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
         var (clientId, workerId) = await CreateClientAndWorkerAsync("activate");
         var contract = await CreateDraftContractAsync(clientId, workerId);
 
-        var response = await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
+        var response = await ActivateAsync(contract.Id);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var activated = await response.Content.ReadFromJsonAsync<ContractResponse>();
@@ -151,7 +168,7 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
     {
         var (clientId, workerId) = await CreateClientAndWorkerAsync("reactivate");
         var contract = await CreateDraftContractAsync(clientId, workerId);
-        await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
+        await ActivateAsync(contract.Id);
 
         var second = await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
 
@@ -163,7 +180,7 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
     {
         var (clientId, workerId) = await CreateClientAndWorkerAsync("terminate");
         var contract = await CreateDraftContractAsync(clientId, workerId);
-        await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
+        await ActivateAsync(contract.Id);
 
         var response = await _client.PostAsJsonAsync($"/api/contracts/{contract.Id}/terminate", new
         {
@@ -198,7 +215,7 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
     {
         var (clientId, workerId) = await CreateClientAndWorkerAsync("badend");
         var contract = await CreateDraftContractAsync(clientId, workerId);
-        await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
+        await ActivateAsync(contract.Id);
 
         var response = await _client.PostAsJsonAsync($"/api/contracts/{contract.Id}/terminate", new
         {
@@ -214,7 +231,7 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
     {
         var (clientId, workerId) = await CreateClientAndWorkerAsync("rehire");
         var contract = await CreateDraftContractAsync(clientId, workerId);
-        await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
+        await ActivateAsync(contract.Id);
         await _client.PostAsJsonAsync($"/api/contracts/{contract.Id}/terminate", new
         {
             endDate = "2026-12-31",
@@ -238,7 +255,7 @@ public class ContractEndpointTests : IClassFixture<AtlasApiFactory>
     {
         var (clientId, workerId) = await CreateClientAndWorkerAsync("filterstatus");
         var contract = await CreateDraftContractAsync(clientId, workerId);
-        await _client.PostAsync($"/api/contracts/{contract.Id}/activate", null);
+        await ActivateAsync(contract.Id);
 
         var active = await _client.GetFromJsonAsync<List<ContractResponse>>("/api/contracts?status=active");
 
