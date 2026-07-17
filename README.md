@@ -61,6 +61,12 @@ Invoice >──────┘  (one per client per completed run)
 - **Completing a run** is one-way and issues one invoice per client: payroll subtotal
   (gross + employer costs) plus the client's management fee on gross, numbered `INV-yyyymm-CC-nnn`,
   in the payroll country's currency.
+- **Leave** is governed by one policy per country (annual + sick working-day allowances per
+  calendar year). Requests consume working days (Mon-Fri, holidays out of scope), must fit in a
+  single calendar year, may not overlap another pending/approved request, and must fit the
+  remaining balance — pending requests reserve days; rejection/cancellation releases them.
+  Lifecycle: `Pending -> Approved | Rejected` (client decision, note required to reject) or
+  `Pending -> Cancelled` (withdrawn).
 
 ## Authentication & authorization
 
@@ -98,6 +104,10 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `POST /api/payroll-runs/{id}/complete` | Complete a run and issue client invoices |
 | `GET /api/invoices`, `GET /api/invoices/{id}` | Invoices (filter: `?clientId=`) |
 | `GET/POST /api/api-users`, `POST /api/api-users/{id}/deactivate` | API keys (platform admin only) |
+| `GET/POST /api/leave-policies`, `GET /api/leave-policies/{code}` | Per-country leave allowances |
+| `GET/POST /api/leave-requests`, `GET /api/leave-requests/{id}` | Leave requests (filters: `?contractId=`, `?status=`) |
+| `POST /api/leave-requests/{id}/approve\|reject\|cancel` | Leave approval flow |
+| `GET /api/contracts/{id}/leave-balances?year=N` | Per-type allowance/used/pending/remaining |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,
