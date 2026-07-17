@@ -59,6 +59,10 @@ public class PayrollService
         var salaryRecords = await _db.SalaryRecords
             .Where(r => payableIds.Contains(r.ContractId))
             .ToListAsync();
+        var enrollments = await _db.BenefitEnrollments
+            .Include(e => e.BenefitPlan)
+            .Where(e => payableIds.Contains(e.ContractId))
+            .ToListAsync();
         var nowUtc = DateTimeOffset.UtcNow;
 
         foreach (var contract in payable)
@@ -77,6 +81,14 @@ public class PayrollService
                 claim.MarkReimbursed(run.Id, nowUtc);
             }
 
+            // Benefit premiums are charged for every enrollment covering the month:
+            // employer share is billed to the client, employee share withheld from net.
+            var covering = enrollments
+                .Where(e => e.ContractId == contract.Id && e.CoversMonth(year, month))
+                .ToList();
+            var benefitsEmployer = covering.Sum(e => e.BenefitPlan!.EmployerShare);
+            var benefitsEmployee = covering.Sum(e => e.BenefitPlan!.EmployeeShare);
+
             run.Payslips.Add(new Payslip
             {
                 PayrollRunId = run.Id,
@@ -88,8 +100,10 @@ public class PayrollService
                 EmployerCost = amounts.EmployerCost,
                 EmployeeDeductions = amounts.EmployeeDeductions,
                 Reimbursements = reimbursements,
-                NetPay = amounts.NetPay + reimbursements,
-                TotalCost = amounts.TotalCost + reimbursements,
+                BenefitsEmployerCost = benefitsEmployer,
+                BenefitsEmployeeDeduction = benefitsEmployee,
+                NetPay = amounts.NetPay - benefitsEmployee + reimbursements,
+                TotalCost = amounts.TotalCost + benefitsEmployer + reimbursements,
             });
         }
 

@@ -27,6 +27,8 @@ public class AtlasDbContext : DbContext
     public DbSet<ContractAmendment> ContractAmendments => Set<ContractAmendment>();
     public DbSet<SalaryRecord> SalaryRecords => Set<SalaryRecord>();
     public DbSet<FxRate> FxRates => Set<FxRate>();
+    public DbSet<BenefitPlan> BenefitPlans => Set<BenefitPlan>();
+    public DbSet<BenefitEnrollment> BenefitEnrollments => Set<BenefitEnrollment>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -238,6 +240,33 @@ public class AtlasDbContext : DbContext
             rate.Property(r => r.BaseCurrencyCode).HasMaxLength(3);
             rate.Property(r => r.QuoteCurrencyCode).HasMaxLength(3);
             rate.HasIndex(r => new { r.BaseCurrencyCode, r.QuoteCurrencyCode, r.EffectiveDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<BenefitPlan>(plan =>
+        {
+            plan.HasKey(p => p.Id);
+            plan.Property(p => p.Name).HasMaxLength(200);
+            plan.Property(p => p.Description).HasMaxLength(500);
+            plan.HasIndex(p => new { p.CountryCode, p.Name }).IsUnique();
+            plan.HasOne(p => p.Country)
+                .WithMany()
+                .HasForeignKey(p => p.CountryCode)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BenefitEnrollment>(enrollment =>
+        {
+            enrollment.HasKey(e => e.Id);
+            enrollment.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            enrollment.HasIndex(e => new { e.ContractId, e.BenefitPlanId, e.Status });
+            enrollment.HasOne(e => e.Contract)
+                .WithMany()
+                .HasForeignKey(e => e.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+            enrollment.HasOne(e => e.BenefitPlan)
+                .WithMany()
+                .HasForeignKey(e => e.BenefitPlanId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ApiUser>(user =>
