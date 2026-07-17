@@ -90,6 +90,12 @@ Invoice >──────┘  (one per client per completed run)
   remainder, so no cent is lost) is withheld from net pay. Enrollments tie a plan to an active
   contract in the same country (one active enrollment per plan per contract; deactivated plans
   accept no new enrollments) and payroll charges every enrollment covering any part of the month.
+- **Terminations & final pay**: the standard flow is a termination request whose proposed end date
+  must satisfy the country's minimum notice period counted from the request date; approving it
+  terminates the contract (the direct `/api/contracts/{id}/terminate` endpoint remains for
+  immediate, for-cause dismissals). The final month's payroll prorates salary by calendar days
+  worked and pays out unused annual leave (allowance minus reserved days, at a daily rate of
+  12 salaries / 260 working days) as part of taxable gross; later months pay nothing.
 
 ## Authentication & authorization
 
@@ -139,6 +145,8 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `GET/POST /api/fx-rates` | Dated FX rates (filters: `?baseCurrency=`, `?quoteCurrency=`) |
 | `GET/POST /api/benefit-plans`, `POST /api/benefit-plans/{id}/deactivate` | Per-country benefit packages |
 | `GET/POST /api/benefit-enrollments`, `POST /api/benefit-enrollments/{id}/end` | Contract benefit enrollments |
+| `GET/POST /api/termination-requests`, `GET /api/termination-requests/{id}` | Notice-checked termination flow |
+| `POST /api/termination-requests/{id}/approve\|reject\|cancel` | Termination approval flow |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,

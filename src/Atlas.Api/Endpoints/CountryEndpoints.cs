@@ -43,6 +43,10 @@ public static class CountryEndpoints
             {
                 errors["employeeDeductionRate"] = ["EmployeeDeductionRate must be a fraction in [0, 1)."];
             }
+            if (request.MinimumNoticeDays is < 0 or > 365)
+            {
+                errors["minimumNoticeDays"] = ["MinimumNoticeDays must be between 0 and 365."];
+            }
             if (errors.Count > 0)
             {
                 return Results.ValidationProblem(errors);
@@ -61,6 +65,7 @@ public static class CountryEndpoints
                 CurrencyCode = request.CurrencyCode!.Trim().ToUpperInvariant(),
                 EmployerCostRate = request.EmployerCostRate,
                 EmployeeDeductionRate = request.EmployeeDeductionRate,
+                MinimumNoticeDays = request.MinimumNoticeDays ?? 30,
             };
             db.Countries.Add(country);
             await db.SaveChangesAsync();
@@ -72,7 +77,7 @@ public static class CountryEndpoints
     }
 
     private static CountryResponse ToResponse(Country c) =>
-        new(c.Code, c.Name, c.CurrencyCode, c.EmployerCostRate, c.EmployeeDeductionRate, c.IsActive);
+        new(c.Code, c.Name, c.CurrencyCode, c.EmployerCostRate, c.EmployeeDeductionRate, c.MinimumNoticeDays, c.IsActive);
 }
 
 public record CreateCountryRequest(
@@ -80,7 +85,8 @@ public record CreateCountryRequest(
     string? Name,
     string? CurrencyCode,
     decimal EmployerCostRate,
-    decimal EmployeeDeductionRate);
+    decimal EmployeeDeductionRate,
+    int? MinimumNoticeDays);
 
 public record CountryResponse(
     string Code,
@@ -88,4 +94,5 @@ public record CountryResponse(
     string CurrencyCode,
     decimal EmployerCostRate,
     decimal EmployeeDeductionRate,
+    int MinimumNoticeDays,
     bool IsActive);

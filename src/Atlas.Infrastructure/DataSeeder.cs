@@ -14,12 +14,12 @@ public static class DataSeeder
 
         var countries = new List<Country>
         {
-            new() { Code = "US", Name = "United States", CurrencyCode = "USD", EmployerCostRate = 0.10m, EmployeeDeductionRate = 0.22m },
-            new() { Code = "GB", Name = "United Kingdom", CurrencyCode = "GBP", EmployerCostRate = 0.138m, EmployeeDeductionRate = 0.25m },
-            new() { Code = "DE", Name = "Germany", CurrencyCode = "EUR", EmployerCostRate = 0.21m, EmployeeDeductionRate = 0.30m },
-            new() { Code = "PH", Name = "Philippines", CurrencyCode = "PHP", EmployerCostRate = 0.12m, EmployeeDeductionRate = 0.15m },
-            new() { Code = "BR", Name = "Brazil", CurrencyCode = "BRL", EmployerCostRate = 0.28m, EmployeeDeductionRate = 0.18m },
-            new() { Code = "IN", Name = "India", CurrencyCode = "INR", EmployerCostRate = 0.13m, EmployeeDeductionRate = 0.12m },
+            new() { Code = "US", Name = "United States", CurrencyCode = "USD", EmployerCostRate = 0.10m, EmployeeDeductionRate = 0.22m, MinimumNoticeDays = 14 },
+            new() { Code = "GB", Name = "United Kingdom", CurrencyCode = "GBP", EmployerCostRate = 0.138m, EmployeeDeductionRate = 0.25m, MinimumNoticeDays = 30 },
+            new() { Code = "DE", Name = "Germany", CurrencyCode = "EUR", EmployerCostRate = 0.21m, EmployeeDeductionRate = 0.30m, MinimumNoticeDays = 28 },
+            new() { Code = "PH", Name = "Philippines", CurrencyCode = "PHP", EmployerCostRate = 0.12m, EmployeeDeductionRate = 0.15m, MinimumNoticeDays = 30 },
+            new() { Code = "BR", Name = "Brazil", CurrencyCode = "BRL", EmployerCostRate = 0.28m, EmployeeDeductionRate = 0.18m, MinimumNoticeDays = 30 },
+            new() { Code = "IN", Name = "India", CurrencyCode = "INR", EmployerCostRate = 0.13m, EmployeeDeductionRate = 0.12m, MinimumNoticeDays = 30 },
         };
         db.Countries.AddRange(countries);
 

@@ -61,6 +61,7 @@ app.MapExpenseEndpoints();
 app.MapAmendmentEndpoints();
 app.MapFxRateEndpoints();
 app.MapBenefitEndpoints();
+app.MapTerminationEndpoints();
 
 app.Run();
 
