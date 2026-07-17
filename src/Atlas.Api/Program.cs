@@ -1,6 +1,21 @@
+using Atlas.Api.Endpoints;
+using Atlas.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = builder.Configuration.GetConnectionString("Atlas") ?? "Data Source=atlas.db";
+builder.Services.AddDbContext<AtlasDbContext>(options => options.UseSqlite(connectionString));
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AtlasDbContext>();
+    db.Database.EnsureCreated();
+    DataSeeder.Seed(db);
+}
 
 app.MapGet("/health", () => Results.Ok(new
 {
@@ -8,6 +23,10 @@ app.MapGet("/health", () => Results.Ok(new
     service = "atlas-net",
     timestampUtc = DateTime.UtcNow,
 }));
+
+app.MapCountryEndpoints();
+app.MapClientEndpoints();
+app.MapWorkerEndpoints();
 
 app.Run();
 
