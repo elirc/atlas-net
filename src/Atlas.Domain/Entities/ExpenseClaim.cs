@@ -14,9 +14,12 @@ public enum ExpenseClaimStatus
 /// next payroll run for the contract's country picks the claim up and pays it
 /// out with the worker's net pay (and bills it on to the client).
 /// </summary>
-public class ExpenseClaim
+public class ExpenseClaim : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required Guid ContractId { get; set; }
     public EmploymentContract? Contract { get; set; }

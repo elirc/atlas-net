@@ -23,11 +23,16 @@ builder.Services.AddAuthorization(options =>
 // RFC 7807 problem responses for unhandled errors and bare status codes.
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddExceptionHandler<ConcurrencyExceptionHandler>();
+
+// Liveness/readiness with a database connectivity probe.
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -40,12 +45,10 @@ if (app.Environment.IsDevelopment())
     DataSeeder.Seed(db);
 }
 
-app.MapGet("/health", () => Results.Ok(new
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    status = "healthy",
-    service = "atlas-net",
-    timestampUtc = DateTime.UtcNow,
-}));
+    ResponseWriter = HealthResponseWriter.WriteAsync,
+});
 
 app.MapCountryEndpoints();
 app.MapClientEndpoints();

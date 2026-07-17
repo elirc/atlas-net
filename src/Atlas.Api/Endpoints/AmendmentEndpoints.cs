@@ -13,8 +13,13 @@ public static class AmendmentEndpoints
     {
         var group = app.MapGroup("/api/contract-amendments").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? contractId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? contractId, string? status, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.ContractAmendments.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -37,7 +42,7 @@ public static class AmendmentEndpoints
                 query = query.Where(a => a.Status == parsed);
             }
 
-            var amendments = await query.OrderBy(a => a.RequestedAtUtc).ToListAsync();
+            var amendments = await query.OrderBy(a => a.RequestedAtUtc).ToPageAsync(http, paging);
             return Results.Ok(amendments.Select(ToResponse).ToList());
         });
 

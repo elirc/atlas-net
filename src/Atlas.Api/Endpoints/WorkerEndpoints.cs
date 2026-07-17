@@ -12,8 +12,13 @@ public static class WorkerEndpoints
     {
         var group = app.MapGroup("/api/workers").RequireAuthorization();
 
-        group.MapGet("/", async (string? countryCode, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (string? countryCode, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.Workers.AsQueryable();
             if (!string.IsNullOrWhiteSpace(countryCode))
             {
@@ -27,7 +32,8 @@ public static class WorkerEndpoints
                 query = query.Where(w => db.Contracts.Any(c => c.WorkerId == w.Id && c.ClientId == ownClientId));
             }
 
-            return Results.Ok(await query.OrderBy(w => w.FullName).Select(w => ToResponse(w)).ToListAsync());
+            var workers = await query.OrderBy(w => w.FullName).ToPageAsync(http, paging);
+            return Results.Ok(workers.Select(ToResponse).ToList());
         });
 
         group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, AtlasDbContext db) =>
@@ -82,7 +88,9 @@ public static class WorkerEndpoints
             var email = request.Email!.Trim().ToLowerInvariant();
             if (await db.Workers.AnyAsync(w => w.Email == email))
             {
-                return Results.Conflict(new { detail = $"A worker with email '{email}' already exists." });
+                return Results.Problem(
+                    detail: $"A worker with email '{email}' already exists.",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             var worker = new Worker

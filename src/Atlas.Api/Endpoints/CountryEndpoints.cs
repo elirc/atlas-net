@@ -11,8 +11,16 @@ public static class CountryEndpoints
     {
         var group = app.MapGroup("/api/countries").RequireAuthorization();
 
-        group.MapGet("/", async (AtlasDbContext db) =>
-            Results.Ok(await db.Countries.OrderBy(c => c.Code).Select(c => ToResponse(c)).ToListAsync()));
+        group.MapGet("/", async (int? page, int? pageSize, HttpContext http, AtlasDbContext db) =>
+        {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
+            var countries = await db.Countries.OrderBy(c => c.Code).ToPageAsync(http, paging);
+            return Results.Ok(countries.Select(ToResponse).ToList());
+        });
 
         group.MapGet("/{code}", async (string code, AtlasDbContext db) =>
         {
@@ -55,7 +63,9 @@ public static class CountryEndpoints
             var code = request.Code!.Trim().ToUpperInvariant();
             if (await db.Countries.AnyAsync(c => c.Code == code))
             {
-                return Results.Conflict(new { detail = $"Country '{code}' already exists." });
+                return Results.Problem(
+                    detail: $"Country '{code}' already exists.",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             var country = new Country

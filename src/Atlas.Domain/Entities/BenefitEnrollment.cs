@@ -11,9 +11,12 @@ public enum BenefitEnrollmentStatus
 /// the plan's premium for every month the enrollment covers (full month when it
 /// covers any part, mirroring contract coverage). Ending an enrollment is one-way.
 /// </summary>
-public class BenefitEnrollment
+public class BenefitEnrollment : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required Guid ContractId { get; set; }
     public EmploymentContract? Contract { get; set; }

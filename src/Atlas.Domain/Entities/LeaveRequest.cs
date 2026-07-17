@@ -14,9 +14,12 @@ public enum LeaveRequestStatus
 /// Pending -> Cancelled (withdrawn). Pending and Approved requests reserve
 /// days against the year's balance; Rejected and Cancelled release them.
 /// </summary>
-public class LeaveRequest
+public class LeaveRequest : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required Guid ContractId { get; set; }
     public EmploymentContract? Contract { get; set; }

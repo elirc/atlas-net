@@ -4,7 +4,9 @@ An Employer-of-Record (EOR) platform backend, in the style of Velocity Global / 
 
 Atlas lets client companies hire workers in countries where they have no legal entity. The platform owns the
 employment relationship end to end: contracts, onboarding, compliance documents, monthly payroll, payslips,
-and client invoicing.
+and client invoicing — plus (v2) API-key auth with client-scoped roles, leave, expense claims, contract
+amendments with salary history, multi-currency invoicing, benefits, notice-checked terminations with final
+pay, operational reports, and production hardening.
 
 ## Stack
 
@@ -124,7 +126,7 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 
 | Method & path | Purpose |
 | --- | --- |
-| `GET /health` | Liveness probe (anonymous) |
+| `GET /health` | Liveness probe with database check (anonymous) |
 | `GET/POST /api/countries`, `GET /api/countries/{code}` | Supported hiring countries |
 | `GET/POST /api/clients`, `GET /api/clients/{id}` | Client companies |
 | `GET/POST /api/workers`, `GET /api/workers/{id}` | Workers (filter: `?countryCode=`) |
@@ -159,8 +161,24 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `GET /api/reports/invoice-aging?clientId=` | Outstanding invoices bucketed by age |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
-domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,
-and a global `IExceptionHandler` catches any `DomainException` that escapes an endpoint.
+domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, duplicate
+countries/workers/policies/rates/plans, ...) return 409, and global `IExceptionHandler`s catch any
+`DomainException` (409) or `DbUpdateConcurrencyException` (409) that escapes an endpoint.
+
+## Production readiness
+
+- **Request logging**: one structured log line per request (method, path, final status, elapsed ms)
+  emitted after the exception handler so the logged status matches what the client received.
+- **Health**: `GET /health` runs ASP.NET Core health checks including a database connectivity
+  probe and reports `{status, service, timestampUtc, checks[]}` (503 when unhealthy).
+- **Pagination**: every flat list endpoint accepts `?page=` (1-based) and `?pageSize=` (default 50,
+  max 200; out-of-range values 400). Bodies stay plain JSON arrays; page metadata travels in
+  `X-Total-Count`, `X-Page`, and `X-Page-Size` response headers. Bounded sub-resource lists
+  (onboarding checklist, salary history, balances, worker documents) are not paged.
+- **Optimistic concurrency**: entities whose updates race (contracts, payroll runs, leave requests,
+  expense claims, amendments, termination requests, benefit enrollments) carry an integer `Version`
+  concurrency token bumped on every update; a stale write fails and surfaces as a 409 ProblemDetails
+  telling the caller to reload and retry.
 
 ## Implementation notes
 
@@ -169,6 +187,8 @@ and a global `IExceptionHandler` catches any `DomainException` that escapes an e
   Ordering, filtering, and instant-preserving round-trips are covered by tests. `DateOnly` is used for
   calendar dates (start/end/expiry) and money is `decimal` + ISO 4217 currency code everywhere.
 - **Testing**: integration tests boot the real host via `WebApplicationFactory` with each fixture bound to
-  its own in-memory SQLite connection; payroll tests provision a private country each so run uniqueness
-  never leaks between tests. A full-journey test walks country -> client -> worker -> contract ->
-  onboarding -> compliance -> payroll -> invoice through the public API only.
+  its own in-memory SQLite connection and a seeded platform-admin API key attached to every test client;
+  payroll tests provision a private country each so run uniqueness never leaks between tests. A
+  full-journey test walks country -> client -> worker -> contract -> onboarding -> compliance ->
+  payroll -> invoice through the public API only. 280 tests across domain unit tests and endpoint
+  integration tests.

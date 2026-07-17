@@ -16,9 +16,12 @@ public enum TerminationRequestStatus
 /// unused-leave payout. Lifecycle: Pending -> Approved | Rejected | Cancelled.
 /// (Immediate termination via the contract endpoint remains for cause.)
 /// </summary>
-public class TerminationRequest
+public class TerminationRequest : IVersioned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Optimistic-concurrency token; bumped on every update.</summary>
+    public int Version { get; set; }
 
     public required Guid ContractId { get; set; }
     public EmploymentContract? Contract { get; set; }

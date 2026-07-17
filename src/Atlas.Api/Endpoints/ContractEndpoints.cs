@@ -13,8 +13,13 @@ public static class ContractEndpoints
     {
         var group = app.MapGroup("/api/contracts").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? clientId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? clientId, string? status, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.Contracts.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -38,7 +43,7 @@ public static class ContractEndpoints
                 query = query.Where(c => c.Status == parsed);
             }
 
-            var contracts = await query.OrderBy(c => c.CreatedAtUtc).ToListAsync();
+            var contracts = await query.OrderBy(c => c.CreatedAtUtc).ToPageAsync(http, paging);
             return Results.Ok(contracts.Select(ToResponse).ToList());
         });
 
@@ -116,10 +121,9 @@ public static class ContractEndpoints
                 c.WorkerId == worker.Id && c.Status != ContractStatus.Terminated);
             if (hasOpenContract)
             {
-                return Results.Conflict(new
-                {
-                    detail = $"Worker '{worker.FullName}' already has a contract that is not terminated.",
-                });
+                return Results.Problem(
+                    detail: $"Worker '{worker.FullName}' already has a contract that is not terminated.",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             var contract = new EmploymentContract

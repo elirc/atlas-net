@@ -13,8 +13,13 @@ public static class TerminationEndpoints
     {
         var group = app.MapGroup("/api/termination-requests").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? contractId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? contractId, string? status, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.TerminationRequests.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -37,7 +42,7 @@ public static class TerminationEndpoints
                 query = query.Where(t => t.Status == parsed);
             }
 
-            var requests = await query.OrderBy(t => t.RequestedAtUtc).ToListAsync();
+            var requests = await query.OrderBy(t => t.RequestedAtUtc).ToPageAsync(http, paging);
             return Results.Ok(requests.Select(ToResponse).ToList());
         });
 

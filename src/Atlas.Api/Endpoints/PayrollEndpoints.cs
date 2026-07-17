@@ -13,8 +13,13 @@ public static class PayrollEndpoints
         // Payroll runs span every client in a country; they are platform operations.
         var runs = app.MapGroup("/api/payroll-runs").RequireAuthorization(AuthPolicies.PlatformAdmin);
 
-        runs.MapGet("/", async (string? countryCode, AtlasDbContext db) =>
+        runs.MapGet("/", async (string? countryCode, int? page, int? pageSize, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.PayrollRuns.Include(r => r.Payslips).AsQueryable();
             if (!string.IsNullOrWhiteSpace(countryCode))
             {
@@ -24,7 +29,7 @@ public static class PayrollEndpoints
 
             var results = await query
                 .OrderBy(r => r.Year).ThenBy(r => r.Month).ThenBy(r => r.CountryCode)
-                .ToListAsync();
+                .ToPageAsync(http, paging);
             return Results.Ok(results.Select(ToSummary).ToList());
         });
 

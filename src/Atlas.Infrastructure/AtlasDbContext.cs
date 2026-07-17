@@ -1,3 +1,4 @@
+using Atlas.Domain;
 using Atlas.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -296,6 +297,18 @@ public class AtlasDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Entities whose updates can race use Version as an optimistic-concurrency
+        // token: SaveChanges bumps it and stale writes fail with a 409 upstream.
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes().ToList())
+        {
+            if (typeof(IVersioned).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property<int>(nameof(IVersioned.Version))
+                    .IsConcurrencyToken();
+            }
+        }
+
         modelBuilder.Entity<Worker>(worker =>
         {
             worker.HasKey(w => w.Id);
@@ -307,6 +320,30 @@ public class AtlasDbContext : DbContext
                 .HasForeignKey(w => w.CountryCode)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        BumpVersions();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        BumpVersions();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>Increments the concurrency token on every modified versioned entity.</summary>
+    private void BumpVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<IVersioned>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.Version++;
+            }
+        }
     }
 
     /// <summary>Stores DateTimeOffset as UTC ticks so SQLite can order and compare it.</summary>

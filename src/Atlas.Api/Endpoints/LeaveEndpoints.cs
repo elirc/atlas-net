@@ -46,9 +46,14 @@ public static class LeaveEndpoints
     {
         var group = app.MapGroup("/api/leave-policies").RequireAuthorization();
 
-        group.MapGet("/", async (AtlasDbContext db) =>
+        group.MapGet("/", async (int? page, int? pageSize, HttpContext http, AtlasDbContext db) =>
         {
-            var policies = await db.LeavePolicies.OrderBy(p => p.CountryCode).ToListAsync();
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
+            var policies = await db.LeavePolicies.OrderBy(p => p.CountryCode).ToPageAsync(http, paging);
             return Results.Ok(policies.Select(ToResponse).ToList());
         });
 
@@ -89,7 +94,9 @@ public static class LeaveEndpoints
             }
             if (await db.LeavePolicies.AnyAsync(p => p.CountryCode == code))
             {
-                return Results.Conflict(new { detail = $"A leave policy for {code} already exists." });
+                return Results.Problem(
+                    detail: $"A leave policy for {code} already exists.",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             var policy = new LeavePolicy
@@ -109,8 +116,13 @@ public static class LeaveEndpoints
     {
         var group = app.MapGroup("/api/leave-requests").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? contractId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? contractId, string? status, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.LeaveRequests.AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -133,7 +145,7 @@ public static class LeaveEndpoints
                 query = query.Where(r => r.Status == parsed);
             }
 
-            var requests = await query.OrderBy(r => r.StartDate).ThenBy(r => r.RequestedAtUtc).ToListAsync();
+            var requests = await query.OrderBy(r => r.StartDate).ThenBy(r => r.RequestedAtUtc).ToPageAsync(http, paging);
             return Results.Ok(requests.Select(ToResponse).ToList());
         });
 

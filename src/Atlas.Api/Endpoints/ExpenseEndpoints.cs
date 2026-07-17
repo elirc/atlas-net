@@ -13,8 +13,13 @@ public static class ExpenseEndpoints
     {
         var group = app.MapGroup("/api/expense-claims").RequireAuthorization();
 
-        group.MapGet("/", async (Guid? contractId, string? status, ClaimsPrincipal user, AtlasDbContext db) =>
+        group.MapGet("/", async (Guid? contractId, string? status, int? page, int? pageSize, ClaimsPrincipal user, HttpContext http, AtlasDbContext db) =>
         {
+            if (Pagination.Validate(page, pageSize, out var paging) is { } problem)
+            {
+                return problem;
+            }
+
             var query = db.ExpenseClaims.Include(e => e.Items).AsQueryable();
             if (!user.IsPlatformAdmin())
             {
@@ -37,7 +42,7 @@ public static class ExpenseEndpoints
                 query = query.Where(e => e.Status == parsed);
             }
 
-            var claims = await query.OrderBy(e => e.SubmittedAtUtc).ToListAsync();
+            var claims = await query.OrderBy(e => e.SubmittedAtUtc).ToPageAsync(http, paging);
             return Results.Ok(claims.Select(ToResponse).ToList());
         });
 
