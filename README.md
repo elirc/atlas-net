@@ -96,6 +96,12 @@ Invoice >──────┘  (one per client per completed run)
   immediate, for-cause dismissals). The final month's payroll prorates salary by calendar days
   worked and pays out unused annual leave (allowance minus reserved days, at a daily rate of
   12 salaries / 260 working days) as part of taxable gross; later months pay nothing.
+- **Reports** (platform-admin only, under `/api/reports`): headcount as of a date (activated
+  contracts covering the date, including notice-serving terminations) broken down by country and
+  client; payroll cost totals per month and currency with country/client/period filters;
+  compliance-document expiries within a window with days-until-expiry; and invoice aging in
+  0-30 / 31-60 / 61-90 / 90+ day buckets per billing currency (no payment tracking, so every
+  invoice counts as outstanding).
 
 ## Authentication & authorization
 
@@ -147,6 +153,10 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `GET/POST /api/benefit-enrollments`, `POST /api/benefit-enrollments/{id}/end` | Contract benefit enrollments |
 | `GET/POST /api/termination-requests`, `GET /api/termination-requests/{id}` | Notice-checked termination flow |
 | `POST /api/termination-requests/{id}/approve\|reject\|cancel` | Termination approval flow |
+| `GET /api/reports/headcount?asOf=` | Headcount by country and client |
+| `GET /api/reports/payroll-costs?countryCode=&clientId=&fromYear=...` | Payroll cost totals per month/currency |
+| `GET /api/reports/compliance-expiries?withinDays=N` | Expired + upcoming document expiries |
+| `GET /api/reports/invoice-aging?clientId=` | Outstanding invoices bucketed by age |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,
