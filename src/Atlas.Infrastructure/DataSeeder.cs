@@ -133,6 +133,27 @@ public static class DataSeeder
             Reason = "Family holiday",
         });
 
+        var phHealth = new BenefitPlan
+        {
+            CountryCode = "PH",
+            Name = "HealthGuard Plus",
+            Description = "Private health insurance incl. dental",
+            MonthlyCost = 4500m,
+            EmployerContributionRate = 0.80m,
+        };
+        db.BenefitPlans.AddRange(
+            phHealth,
+            new BenefitPlan { CountryCode = "PH", Name = "Pension Boost", MonthlyCost = 3000m, EmployerContributionRate = 0.50m },
+            new BenefitPlan { CountryCode = "DE", Name = "Zusatzkrankenversicherung", MonthlyCost = 180m, EmployerContributionRate = 0.60m },
+            new BenefitPlan { CountryCode = "US", Name = "Gold Health PPO", MonthlyCost = 900m, EmployerContributionRate = 0.75m });
+
+        db.BenefitEnrollments.Add(new BenefitEnrollment
+        {
+            ContractId = mariaContract.Id,
+            BenefitPlanId = phHealth.Id,
+            StartDate = new DateOnly(2026, 2, 1),
+        });
+
         db.ApiUsers.AddRange(
             new ApiUser { Name = "Atlas Ops (dev)", ApiKey = "dev-admin-key", Role = ApiRole.PlatformAdmin },
             new ApiUser { Name = "Acme Robotics admin (dev)", ApiKey = "dev-acme-admin-key", Role = ApiRole.ClientAdmin, ClientId = acme.Id },

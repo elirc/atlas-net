@@ -85,6 +85,11 @@ Invoice >──────┘  (one per client per completed run)
   rate effective for the payroll period — same selection rule as salary history. Completing a run
   without a needed rate fails with 409 and leaves the run draft; all conversions round to 2 dp
   away from zero.
+- **Benefits** are per-country plans priced as a monthly premium with an employer contribution
+  rate in [0, 1]: the employer share (rounded) is billed to the client, the employee share (exact
+  remainder, so no cent is lost) is withheld from net pay. Enrollments tie a plan to an active
+  contract in the same country (one active enrollment per plan per contract; deactivated plans
+  accept no new enrollments) and payroll charges every enrollment covering any part of the month.
 
 ## Authentication & authorization
 
@@ -132,6 +137,8 @@ and revoked via `POST /api/api-users/{id}/deactivate`. Development seeding creat
 | `POST /api/contract-amendments/{id}/approve\|reject\|cancel` | Amendment approval flow |
 | `GET /api/contracts/{id}/salary-history` | Immutable salary/title history |
 | `GET/POST /api/fx-rates` | Dated FX rates (filters: `?baseCurrency=`, `?quoteCurrency=`) |
+| `GET/POST /api/benefit-plans`, `POST /api/benefit-plans/{id}/deactivate` | Per-country benefit packages |
+| `GET/POST /api/benefit-enrollments`, `POST /api/benefit-enrollments/{id}/end` | Contract benefit enrollments |
 
 Errors are RFC 7807 ProblemDetails throughout: validation failures return 400 with per-field errors,
 domain-rule violations (double activation, duplicate payroll run, incomplete onboarding, ...) return 409,

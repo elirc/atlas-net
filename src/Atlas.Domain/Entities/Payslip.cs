@@ -27,9 +27,15 @@ public class Payslip
     /// <summary>Approved expense claims paid out with this payslip (untaxed pass-through).</summary>
     public decimal Reimbursements { get; set; }
 
-    /// <summary>Paid to the worker: gross - deductions + reimbursements.</summary>
+    /// <summary>Employer share of benefit premiums for the month; billed to the client.</summary>
+    public decimal BenefitsEmployerCost { get; set; }
+
+    /// <summary>Employee share of benefit premiums; deducted from the worker's net pay.</summary>
+    public decimal BenefitsEmployeeDeduction { get; set; }
+
+    /// <summary>Paid to the worker: gross - deductions - benefit deductions + reimbursements.</summary>
     public required decimal NetPay { get; set; }
 
-    /// <summary>Gross + employer cost + reimbursements: what the client is billed for this worker.</summary>
+    /// <summary>Gross + employer cost + employer benefits + reimbursements: what the client is billed.</summary>
     public required decimal TotalCost { get; set; }
 }
