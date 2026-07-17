@@ -14,6 +14,8 @@ public class AtlasDbContext : DbContext
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Worker> Workers => Set<Worker>();
     public DbSet<EmploymentContract> Contracts => Set<EmploymentContract>();
+    public DbSet<OnboardingItem> OnboardingItems => Set<OnboardingItem>();
+    public DbSet<ComplianceDocument> ComplianceDocuments => Set<ComplianceDocument>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -44,6 +46,56 @@ public class AtlasDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(c => c.HeadquartersCountryCode)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EmploymentContract>(contract =>
+        {
+            contract.HasKey(c => c.Id);
+            contract.Property(c => c.JobTitle).HasMaxLength(200);
+            contract.Property(c => c.CurrencyCode).HasMaxLength(3);
+            contract.Property(c => c.Status).HasConversion<string>().HasMaxLength(20);
+            contract.Property(c => c.TerminationReason).HasMaxLength(500);
+            contract.HasIndex(c => c.WorkerId);
+            contract.HasIndex(c => c.ClientId);
+            contract.HasIndex(c => new { c.CountryCode, c.Status });
+            contract.HasOne(c => c.Client)
+                .WithMany()
+                .HasForeignKey(c => c.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+            contract.HasOne(c => c.Worker)
+                .WithMany()
+                .HasForeignKey(c => c.WorkerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            contract.HasOne(c => c.Country)
+                .WithMany()
+                .HasForeignKey(c => c.CountryCode)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OnboardingItem>(item =>
+        {
+            item.HasKey(i => i.Id);
+            item.Property(i => i.Title).HasMaxLength(200);
+            item.Property(i => i.Notes).HasMaxLength(1000);
+            item.Property(i => i.Type).HasConversion<string>().HasMaxLength(30);
+            item.HasIndex(i => new { i.ContractId, i.Type }).IsUnique();
+            item.HasOne(i => i.Contract)
+                .WithMany()
+                .HasForeignKey(i => i.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ComplianceDocument>(doc =>
+        {
+            doc.HasKey(d => d.Id);
+            doc.Property(d => d.Name).HasMaxLength(200);
+            doc.Property(d => d.Type).HasConversion<string>().HasMaxLength(30);
+            doc.HasIndex(d => d.WorkerId);
+            doc.HasIndex(d => d.ExpiryDate);
+            doc.HasOne(d => d.Worker)
+                .WithMany()
+                .HasForeignKey(d => d.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Worker>(worker =>

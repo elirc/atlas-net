@@ -116,6 +116,7 @@ public static class ContractEndpoints
                 StartDate = request.StartDate,
             };
             db.Contracts.Add(contract);
+            db.OnboardingItems.AddRange(OnboardingItem.CreateDefaultChecklist(contract.Id));
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/contracts/{contract.Id}", ToResponse(contract));
@@ -127,6 +128,17 @@ public static class ContractEndpoints
             if (contract is null)
             {
                 return Results.NotFound();
+            }
+
+            var pendingRequired = await db.OnboardingItems
+                .Where(i => i.ContractId == id && i.IsRequired && !i.IsCompleted)
+                .Select(i => i.Title)
+                .ToListAsync();
+            if (pendingRequired.Count > 0)
+            {
+                return Results.Problem(
+                    detail: $"Contract cannot be activated: {pendingRequired.Count} required onboarding item(s) pending ({string.Join("; ", pendingRequired)}).",
+                    statusCode: StatusCodes.Status409Conflict);
             }
 
             try
